@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+    <title>המשפחה של סול - שיעור + פסנתר</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <style>
+        :root {
+            --white-w: 50px; --black-w: 25px;
+            --modern-hi: #454b54; --modern-lo: #1b1e23; --teal: #6fd6c9; --gold: #e0a83f;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #111;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none !important;
+            -webkit-touch-callout: none;
+            font-family: Arial, sans-serif;
+        }
+        #app { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        #start-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.85); color: white; display: flex; justify-content: center; align-items: center; z-index: 100; cursor: pointer; font-size: 22px; text-align: center; padding: 20px; box-sizing: border-box; }
+
+        #video-wrap { flex: 1 1 auto; min-height: 0; background: #000; touch-action: auto; }
+        #video-wrap iframe { width: 100%; height: 100%; border: 0; touch-action: auto; }
+
+        #speed-bar {
+            flex: 0 0 auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 0;
+            background: #1a1a1a;
+            touch-action: auto;
+        }
+        .speed-step-btn {
+            touch-action: auto;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            font-family: Arial, sans-serif;
+            background: #333;
+            color: #fff;
+            cursor: pointer;
+        }
+        .speed-step-btn:active { background: #555; }
+        #speed-reset {
+            touch-action: auto;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 18px;
+            font-size: 16px;
+            font-family: Arial, sans-serif;
+            background: #333;
+            color: #fff;
+            cursor: pointer;
+            min-width: 90px;
+        }
+        #speed-reset.is-normal { background: #ffeb3b; color: #000; font-weight: bold; }
+
+        #piano-container {
+            flex: 0 0 auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            padding: 1.5vh 0;
+            box-sizing: border-box;
+            touch-action: none !important;
+        }
+        /* Grid instead of flex: the outer two columns are the same fixed
+           width (one holds the knob, the other is an empty mirror), so the
+           cabinet in the middle column is truly centered on the page —
+           centering [knob + cabinet] as one flex group instead left the
+           piano visibly off-center, shifted by roughly the knob's width. */
+        #rig {
+            display: grid;
+            grid-template-columns: 96px auto 96px;
+            align-items: end;
+            justify-content: center;
+            gap: 16px;
+            width: 100%;
+            overflow-x: auto;
+            padding: 0 8px;
+        }
+        .knob-wrap { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 8px; touch-action: auto; padding-bottom: 6px; }
+        .knob-label { font-size: 12px; color: rgba(255,255,255,0.5); }
+        .knob {
+            width: var(--knob-size, 46px); height: var(--knob-size, 46px); border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, #565c66, #1c1e22 72%);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -2px 4px rgba(0,0,0,0.4);
+            position: relative; cursor: grab; touch-action: none;
+        }
+        .knob-indicator {
+            position: absolute; bottom: 50%; left: 50%; width: 4px; height: 34%; margin-left: -2px;
+            background: var(--teal); border-radius: 2px; transform-origin: 50% 100%;
+            box-shadow: 0 0 4px rgba(111,214,201,0.85);
+        }
+        #cabinet {
+            flex-shrink: 0;
+            width: fit-content;
+            display: flex; flex-direction: column;
+            background: linear-gradient(180deg, var(--modern-hi) 0%, var(--modern-lo) 100%);
+            border-radius: 14px;
+            padding: 12px 12px 0;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.15), 0 10px 26px rgba(0,0,0,0.45);
+        }
+        #cabinet-lip {
+            flex: 0 0 auto;
+            height: 4px; border-radius: 3px; margin-bottom: 10px;
+            background: linear-gradient(90deg, var(--teal), #bdf2ea, var(--teal));
+            box-shadow: 0 0 6px rgba(111,214,201,0.6);
+        }
+        #keywell {
+            background: linear-gradient(180deg, #100f13 0%, var(--modern-lo) 100%);
+            border-radius: 10px 10px 0 0;
+            padding: 10px 10px 0;
+            display: flex; flex-direction: column; align-items: stretch;
+        }
+        #instrument-panel {
+            flex: 0 0 auto;
+            display: flex; justify-content: center; flex-wrap: wrap; gap: 10px;
+            padding-bottom: 12px;
+        }
+        .inst-btn {
+            touch-action: auto;
+            display: flex; align-items: center; gap: 7px;
+            background: rgba(0,0,0,0.32);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 9px;
+            padding: 8px 16px;
+            font-size: 15px;
+            font-family: Arial, sans-serif;
+            color: rgba(255,255,255,0.6);
+            cursor: pointer;
+        }
+        .inst-btn .led { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.15); }
+        .inst-btn.active { color: #fff; border-color: rgba(255,255,255,0.22); }
+        .inst-btn.active .led { background: var(--gold); box-shadow: 0 0 5px 2px rgba(224,168,63,0.75); }
+        .piano {
+            align-self: center;
+            display: flex;
+            position: relative;
+            direction: ltr;
+            height: var(--key-h, 220px);
+            touch-action: none !important;
+        }
+
+        .key {
+            position: relative;
+            border: 1px solid #000;
+            box-sizing: border-box;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            padding-bottom: 6px;
+            z-index: 10;
+            touch-action: none !important;
+            -webkit-touch-callout: none;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .white-key { width: var(--white-w); height: 100%; background-color: white; border-radius: 0 0 5px 5px; }
+
+        .black-key {
+            width: var(--black-w);
+            height: 45%;
+            background-color: #333;
+            z-index: 30;
+            margin-left: calc(var(--black-w) / -2);
+            margin-right: calc(var(--black-w) / -2);
+            border-radius: 0 0 3px 3px;
+        }
+
+        .key.active { background-color: #ffeb3b !important; }
+        .key.due { box-shadow: inset 0 0 0 5px #4caf50; }
+        .key.correct-flash {
+            background-color: #ffab00 !important;
+            box-shadow: 0 0 10px 2px rgba(255, 171, 0, 0.45);
+            transition: background-color 0.25s ease-out, box-shadow 0.25s ease-out;
+            z-index: 40;
+        }
+        @keyframes star-pop {
+            0%   { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+            40%  { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1.7); opacity: 0; }
+        }
+        .star-pop {
+            position: absolute;
+            top: 35%;
+            left: 50%;
+            font-size: 28px;
+            pointer-events: none;
+            animation: star-pop 0.55s ease-out forwards;
+            z-index: 41;
+        }
+
+        .character-img {
+            width: 80%;
+            margin-bottom: 4px;
+            pointer-events: none;
+            -webkit-touch-callout: none;
+            user-select: none;
+        }
+
+        #calib-panel {
+            display: none;
+            position: fixed;
+            top: 8px;
+            left: 8px;
+            /* Higher than #start-screen (100) — if that overlay ever fails to
+               dismiss (e.g. Tone.js/audio setup stalls), the calibration
+               buttons underneath must still be reachable, since calibration
+               only needs the video player, not the piano audio. */
+            z-index: 200;
+            background: rgba(0,0,0,0.75);
+            border-radius: 10px;
+            padding: 8px;
+            max-width: 220px;
+            touch-action: auto;
+            font-family: Arial, sans-serif;
+            color: #fff;
+        }
+        #calib-panel button {
+            touch-action: auto;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 14px;
+            cursor: pointer;
+            margin: 2px;
+        }
+        #calib-mark { background: #ffeb3b; color: #000; font-weight: bold; width: 100%; padding: 12px; font-size: 16px; }
+        #calib-undo { background: #555; color: #fff; }
+        #calib-clear { background: #555; color: #fff; }
+        #calib-copy { background: #4caf50; color: #fff; }
+        #calib-list {
+            touch-action: auto;
+            max-height: 110px;
+            overflow-y: auto;
+            font-size: 12px;
+            margin-top: 6px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 6px;
+            padding: 4px;
+            direction: ltr;
+            text-align: left;
+        }
+        #calib-copy-box {
+            display: none;
+            touch-action: auto;
+            width: 100%;
+            box-sizing: border-box;
+            margin-top: 6px;
+            font-size: 12px;
+            direction: ltr;
+            text-align: left;
+            resize: none;
+            border-radius: 6px;
+            border: 1px solid #4caf50;
+            padding: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div id="video-wrap">
+        <div id="lesson-video"></div>
+    </div>
+    <div id="speed-bar">
+        <button id="speed-minus" class="speed-step-btn">－</button>
+        <button id="speed-reset" class="is-normal">מהירות</button>
+        <button id="speed-plus" class="speed-step-btn">＋</button>
+    </div>
+    <div id="piano-container">
+        <div id="rig">
+            <div class="knob-wrap">
+                <span class="knob-label">ווליום</span>
+                <div class="knob" id="volKnob"><div class="knob-indicator"></div></div>
+            </div>
+            <div id="cabinet">
+                <div id="cabinet-lip"></div>
+                <div id="keywell">
+                    <div id="instrument-panel">
+                        <button class="inst-btn active" data-mode="piano"><span class="led"></span>פסנתר</button>
+                        <button class="inst-btn" data-mode="organ"><span class="led"></span>אורגן</button>
+                        <button class="inst-btn" data-mode="guitar"><span class="led"></span>גיטרה</button>
+                        <button class="inst-btn" data-mode="flute"><span class="led"></span>חליל</button>
+                        <button class="inst-btn" data-mode="drums"><span class="led"></span>תופים</button>
+                    </div>
+                    <div class="piano" id="piano"></div>
+                </div>
+            </div>
+            <div></div>
+        </div>
+    </div>
+</div>
+
+<div id="start-screen">לחצי כאן כדי להתחיל את השיעור והפסנתר</div>
+
+<div id="calib-panel">
+    <button id="calib-mark">סמן עכשיו ▶</button>
+    <div style="display:flex; justify-content:space-between;">
+        <button id="calib-undo">בטל אחרון</button>
+        <button id="calib-clear">נקה הכל</button>
+    </div>
+    <button id="calib-copy" style="width:100%">העתק תוצאות</button>
+    <textarea id="calib-copy-box" readonly rows="3"></textarea>
+    <div id="calib-list"></div>
+</div>
+
+<script>
+    const startScreen = document.getElementById('start-screen');
+    const pianoElement = document.getElementById('piano');
+    const pianoContainer = document.getElementById('piano-container');
+
+    // Calibration tool is dev-only: hidden from students, shown only when
+    // building/checking a song's timing map via ?admin=1 in the URL.
+    if (new URLSearchParams(location.search).get('admin') === '1') {
+        document.getElementById('calib-panel').style.display = 'block';
+    }
+
+    // Real YouTube IFrame API (instead of one-way postMessage guesses) so we can
+    // reliably read back the current playback time for the calibration tool below.
+    let player = null;
+    let pendingPlay = false;
+    window.onYouTubeIframeAPIReady = function () {
+        player = new YT.Player('lesson-video', {
+            videoId: 'wV1enhokhAA',
+            playerVars: { playsinline: 1, rel: 0 },
+            events: {
+                onReady: () => { if (pendingPlay) player.playVideo(); }
+            }
+        });
+    };
+
+    startScreen.addEventListener('click', async () => {
+        await Tone.start();
+        await reverb.ready;
+        startScreen.style.display = 'none';
+        console.log("Audio Context started");
+
+        if (player && player.playVideo) player.playVideo();
+        else pendingPlay = true;
+    });
+
+    // Speed stepper: minus/plus move in 0.25 steps between 0.5x-1.5x,
+    // the center button both shows the current speed and resets to normal.
+    const speedSteps = [0.5, 0.75, 1, 1.25, 1.5];
+    let speedIndex = 2; // 1x
+    const speedMinusBtn = document.getElementById('speed-minus');
+    const speedPlusBtn = document.getElementById('speed-plus');
+    const speedResetBtn = document.getElementById('speed-reset');
+
+    function applySpeed(index) {
+        speedIndex = Math.max(0, Math.min(speedSteps.length - 1, index));
+        const rate = speedSteps[speedIndex];
+        if (player && player.setPlaybackRate) player.setPlaybackRate(rate);
+        const isNormal = rate === 1;
+        speedResetBtn.textContent = isNormal ? 'מהירות' : `×${rate}`;
+        speedResetBtn.classList.toggle('is-normal', isNormal);
+    }
+
+    speedMinusBtn.addEventListener('click', () => applySpeed(speedIndex - 1));
+    speedPlusBtn.addEventListener('click', () => applySpeed(speedIndex + 1));
+    speedResetBtn.addEventListener('click', () => applySpeed(2));
+
+    // --- Calibration tool: tap "mark now" every time a character hits the green
+    // line, and it logs the exact video timestamp. Not part of the kids' UI —
+    // this is a dev tool for building a note-timing map for this song later.
+    const calibMarks = [];
+    const calibListEl = document.getElementById('calib-list');
+    const calibMarkBtn = document.getElementById('calib-mark');
+    const calibUndoBtn = document.getElementById('calib-undo');
+    const calibClearBtn = document.getElementById('calib-clear');
+    const calibCopyBtn = document.getElementById('calib-copy');
+
+    function renderCalibList() {
+        calibListEl.innerHTML = calibMarks
+            .map((t, i) => `${i + 1}. ${t.toFixed(2)}s`)
+            .join('<br>');
+        calibListEl.scrollTop = calibListEl.scrollHeight;
+    }
+
+    calibMarkBtn.addEventListener('click', () => {
+        if (!player || !player.getCurrentTime) return;
+        calibMarks.push(player.getCurrentTime());
+        renderCalibList();
+    });
+    calibUndoBtn.addEventListener('click', () => { calibMarks.pop(); renderCalibList(); });
+    calibClearBtn.addEventListener('click', () => { calibMarks.length = 0; renderCalibList(); });
+    const calibCopyBox = document.getElementById('calib-copy-box');
+    calibCopyBtn.addEventListener('click', () => {
+        const text = calibMarks.map(t => t.toFixed(2)).join(', ');
+        // The Clipboard API silently fails in some mobile/embedded browser
+        // contexts with no visible error — always show the text in a
+        // selectable box too, so copying works no matter what, by hand if
+        // the automatic copy didn't actually go through.
+        calibCopyBox.value = text;
+        calibCopyBox.style.display = 'block';
+        calibCopyBox.focus();
+        calibCopyBox.select();
+        navigator.clipboard.writeText(text).then(() => {
+            calibCopyBtn.textContent = 'הועתק! (או בחרי ידנית למטה)';
+        }).catch(() => {
+            calibCopyBtn.textContent = 'בחרי את הטקסט למטה ותעתיקי ידנית';
+        });
+        setTimeout(() => { calibCopyBtn.textContent = 'העתק תוצאות'; }, 2500);
+    });
+
+    // No calibrated song for "ארץ זבת חלב ודבש" yet — leave empty so the
+    // due/correct feedback logic below simply never triggers, without
+    // disabling it.
+    const songTimes = [];
+    const songLetters = [];
+    const songNotes = songTimes.map((t, i) => ({ time: t, note: songLetters[i] + '4' }));
+
+    const NOTE_LEAD = 0.6;
+    const NOTE_TAIL = 0.45;
+    let songIdx = 0;
+    let songHit = false;
+    const keyByNote = {};
+
+    const characterImages = ["דו.png", "רה.png", "מי.png", "פה.png", "סול.png", "לה.png", "סי.png"];
+
+    // Map every note to its real recorded sample (24 files exist in sounds/,
+    // the previous version only wired up 4 of them and let Tone.js pitch-shift the rest).
+    const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    // Single octave: this song doesn't need the range of a second one, and
+    // one octave keeps the correct-key feedback unambiguous (matches the
+    // pattern used for the other calibrated lessons).
+    const octaves = [4];
+
+    function noteToFile(note, octave) {
+        const letter = note[0].toLowerCase();
+        const sharp = note.includes('#') ? 'd' : '';
+        return `sounds/${letter}${sharp}${octave}.wav`;
+    }
+
+    // sounds/d4.wav and sounds/e4.wav actually contain mislabeled D3/E3 audio
+    // (a leftover export mistake, not something the recording session did wrong).
+    // Skip them so Tone.Sampler falls back to pitch-shifting from the nearest
+    // good sample (the same behavior the original piano already relies on).
+    const knownBadSamples = new Set(['D4', 'E4']);
+
+    const sampleUrls = {};
+    octaves.forEach(octave => {
+        notes.forEach(note => {
+            const fullNote = note + octave;
+            if (knownBadSamples.has(fullNote)) return;
+            sampleUrls[fullNote] = noteToFile(note, octave);
+        });
+    });
+
+    // Shared raw Web Audio context (Tone.js's own) so the synthesized extra
+    // instruments (organ/guitar/flute/drums) and the real piano samples all
+    // pass through one master volume knob instead of being wired separately.
+    const audioCtx = Tone.getContext().rawContext;
+    const masterGain = audioCtx.createGain();
+    masterGain.gain.value = 1;
+    masterGain.connect(audioCtx.destination);
+
+    // A subtle reverb gives the notes a gentle "sustain pedal" quality —
+    // like they keep resonating in the room rather than stopping dead.
+    const reverb = new Tone.Reverb({ decay: 2.5, wet: 0.22 }).connect(masterGain);
+
+    const sampler = new Tone.Sampler({
+        urls: sampleUrls,
+        baseUrl: "./",
+        // A real piano note keeps ringing for a while after the key is released.
+        // The default release (~0.1s) cut notes off almost the instant a child
+        // lifted their finger, especially on quick taps. 2.2s lets it fade out naturally.
+        attack: 0.005,
+        release: 2.2,
+        onload: () => console.log("Sounds loaded!"),
+        onerror: (e) => console.log("Error loading sound", e)
+    }).connect(reverb);
+
+    // --- Extra instruments (organ/guitar/flute/drums) — synthesized, since
+    // we only have real recordings for the piano. "piano" mode keeps using
+    // the Tone.Sampler above untouched; everything else routes here.
+    let currentMode = 'piano';
+    const synthActive = new Map();
+
+    function noteNameToFreq(name) {
+        const idx = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 };
+        const m = name.match(/^([A-G]#?)(\d)$/);
+        const midi = (parseInt(m[2], 10) + 1) * 12 + idx[m[1]];
+        return 440 * Math.pow(2, (midi - 69) / 12);
+    }
+
+    function makeNoiseBuffer(duration) {
+        const size = Math.max(1, Math.floor(audioCtx.sampleRate * duration));
+        const buffer = audioCtx.createBuffer(1, size, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < size; i++) data[i] = Math.random() * 2 - 1;
+        return buffer;
+    }
+
+    function drumNoise(now, opts) {
+        const src = audioCtx.createBufferSource();
+        src.buffer = makeNoiseBuffer(opts.decay + 0.05);
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = opts.filterType || 'highpass';
+        filter.frequency.value = opts.freq || 4000;
+        if (opts.q) filter.Q.value = opts.q;
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(opts.vol, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + opts.decay);
+        src.connect(filter); filter.connect(g); g.connect(masterGain);
+        src.start(now);
+    }
+
+    function drumTone(now, opts) {
+        const osc = audioCtx.createOscillator();
+        osc.type = opts.type || 'sine';
+        osc.frequency.setValueAtTime(opts.startFreq, now);
+        osc.frequency.exponentialRampToValueAtTime(Math.max(1, opts.endFreq), now + opts.pitchDecay);
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(opts.vol, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + opts.decay);
+        osc.connect(g); g.connect(masterGain);
+        osc.start(now); osc.stop(now + opts.decay + 0.05);
+    }
+
+    function playDrum(name) {
+        const now = audioCtx.currentTime;
+        switch (name) {
+            case 'kick': return drumTone(now, { type: 'sine', startFreq: 150, endFreq: 40, pitchDecay: 0.12, decay: 0.35, vol: 1 });
+            case 'snare':
+                drumNoise(now, { filterType: 'bandpass', freq: 1800, q: 0.7, decay: 0.18, vol: 0.9 });
+                return drumTone(now, { type: 'triangle', startFreq: 200, endFreq: 120, pitchDecay: 0.05, decay: 0.12, vol: 0.5 });
+            case 'closedhat': return drumNoise(now, { filterType: 'highpass', freq: 7000, decay: 0.06, vol: 0.6 });
+            case 'openhat': return drumNoise(now, { filterType: 'highpass', freq: 6000, decay: 0.35, vol: 0.5 });
+            case 'tom-low': return drumTone(now, { type: 'sine', startFreq: 140, endFreq: 90, pitchDecay: 0.1, decay: 0.3, vol: 0.9 });
+            case 'tom-mid': return drumTone(now, { type: 'sine', startFreq: 190, endFreq: 120, pitchDecay: 0.1, decay: 0.28, vol: 0.9 });
+            case 'tom-hi': return drumTone(now, { type: 'sine', startFreq: 260, endFreq: 160, pitchDecay: 0.09, decay: 0.24, vol: 0.9 });
+            case 'clap':
+                drumNoise(now, { filterType: 'bandpass', freq: 1500, q: 1.2, decay: 0.08, vol: 0.8 });
+                return drumNoise(now + 0.02, { filterType: 'bandpass', freq: 1500, q: 1.2, decay: 0.15, vol: 0.8 });
+            case 'rim': return drumTone(now, { type: 'square', startFreq: 900, endFreq: 850, pitchDecay: 0.02, decay: 0.06, vol: 0.4 });
+            case 'shaker': return drumNoise(now, { filterType: 'highpass', freq: 5000, decay: 0.12, vol: 0.35 });
+            case 'conga': return drumTone(now, { type: 'sine', startFreq: 380, endFreq: 210, pitchDecay: 0.05, decay: 0.2, vol: 0.85 });
+            case 'crash': return drumNoise(now, { filterType: 'highpass', freq: 5000, decay: 0.9, vol: 0.45 });
+        }
+    }
+
+    function synthNoteOn(key, freq) {
+        const now = audioCtx.currentTime;
+        const gain = audioCtx.createGain();
+        const nodes = [];
+
+        if (currentMode === 'guitar') {
+            gain.connect(masterGain);
+            [{ n: 1, vol: 0.5, decay: 1.05 }, { n: 2, vol: 0.32, decay: 0.75 }, { n: 3, vol: 0.19, decay: 0.55 },
+             { n: 4, vol: 0.11, decay: 0.4 }, { n: 5, vol: 0.06, decay: 0.28 }].forEach(function (h) {
+                const osc = audioCtx.createOscillator();
+                osc.type = 'triangle';
+                osc.frequency.value = freq * h.n;
+                const hg = audioCtx.createGain();
+                hg.gain.setValueAtTime(0, now);
+                hg.gain.linearRampToValueAtTime(h.vol, now + 0.003);
+                hg.gain.exponentialRampToValueAtTime(0.0006, now + h.decay);
+                osc.connect(hg); hg.connect(gain);
+                osc.start(now); osc.stop(now + h.decay + 0.1);
+                nodes.push(osc);
+            });
+            const sub = audioCtx.createOscillator();
+            sub.type = 'sine'; sub.frequency.value = freq / 2;
+            const subGain = audioCtx.createGain();
+            subGain.gain.setValueAtTime(0, now);
+            subGain.gain.linearRampToValueAtTime(0.18, now + 0.005);
+            subGain.gain.exponentialRampToValueAtTime(0.0005, now + 0.85);
+            sub.connect(subGain); subGain.connect(gain);
+            sub.start(now); sub.stop(now + 0.9);
+            nodes.push(sub);
+            const pick = audioCtx.createBufferSource();
+            pick.buffer = makeNoiseBuffer(0.02);
+            const pickFilter = audioCtx.createBiquadFilter();
+            pickFilter.type = 'highpass'; pickFilter.frequency.value = 2200;
+            const pickGain = audioCtx.createGain();
+            pickGain.gain.setValueAtTime(0.32, now);
+            pickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+            pick.connect(pickFilter); pickFilter.connect(pickGain); pickGain.connect(gain);
+            pick.start(now);
+            nodes.push(pick);
+            gain.gain.value = 1;
+
+        } else if (currentMode === 'flute') {
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass'; filter.frequency.value = 2400; filter.Q.value = 0.3;
+            filter.connect(gain); gain.connect(masterGain);
+
+            const lfo = audioCtx.createOscillator();
+            lfo.type = 'sine'; lfo.frequency.value = 4.5;
+            const lfoGain = audioCtx.createGain();
+            lfoGain.gain.value = 2.4;
+            lfo.connect(lfoGain); lfo.start(now);
+            nodes.push(lfo);
+
+            [{ n: 1, vol: 0.30 }, { n: 2, vol: 0.05 }].forEach(function (h) {
+                const osc = audioCtx.createOscillator();
+                osc.type = 'sine'; osc.frequency.value = freq * h.n;
+                lfoGain.connect(osc.frequency);
+                const hg = audioCtx.createGain();
+                hg.gain.value = h.vol;
+                osc.connect(hg); hg.connect(filter);
+                osc.start(now);
+                nodes.push(osc);
+            });
+
+            const breath = audioCtx.createBufferSource();
+            breath.buffer = makeNoiseBuffer(2); breath.loop = true;
+            const breathFilter = audioCtx.createBiquadFilter();
+            breathFilter.type = 'bandpass'; breathFilter.frequency.value = freq * 1.5; breathFilter.Q.value = 1.4;
+            const breathGain = audioCtx.createGain();
+            breathGain.gain.value = 0.04;
+            breath.connect(breathFilter); breathFilter.connect(breathGain); breathGain.connect(filter);
+            breath.start(now);
+            nodes.push(breath);
+
+            const chiff = audioCtx.createBufferSource();
+            chiff.buffer = makeNoiseBuffer(0.05);
+            const chiffFilter = audioCtx.createBiquadFilter();
+            chiffFilter.type = 'bandpass'; chiffFilter.frequency.value = freq * 1.8; chiffFilter.Q.value = 1.2;
+            const chiffGain = audioCtx.createGain();
+            chiffGain.gain.setValueAtTime(0.12, now);
+            chiffGain.gain.exponentialRampToValueAtTime(0.0008, now + 0.05);
+            chiff.connect(chiffFilter); chiffFilter.connect(chiffGain); chiffGain.connect(filter);
+            chiff.start(now);
+            nodes.push(chiff);
+
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(1.05, now + 0.08);
+
+        } else {
+            // Organ: what used to be the piano's own engine — two
+            // slightly-detuned triangle oscillators through a filter that
+            // opens briefly then settles into a steady sustain tone.
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(4200, now);
+            filter.frequency.exponentialRampToValueAtTime(1500, now + 0.45);
+            filter.Q.value = 0.3;
+            filter.connect(gain); gain.connect(masterGain);
+
+            [-3, 3].forEach(function (cents, i) {
+                const osc = audioCtx.createOscillator();
+                osc.type = 'triangle';
+                osc.frequency.value = freq * Math.pow(2, cents / 1200);
+                const og = audioCtx.createGain();
+                og.gain.value = i === 0 ? 0.22 : 0.18;
+                osc.connect(og); og.connect(filter);
+                osc.start(now);
+                nodes.push(osc);
+            });
+
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(1, now + 0.02);
+        }
+        synthActive.set(key, { nodes: nodes, gain: gain });
+    }
+
+    const synthSustainModes = ['organ', 'flute'];
+
+    function synthNoteOff(key) {
+        const active = synthActive.get(key);
+        if (!active) return;
+        if (synthSustainModes.indexOf(currentMode) !== -1) {
+            const now = audioCtx.currentTime;
+            active.gain.gain.cancelScheduledValues(now);
+            active.gain.gain.setValueAtTime(active.gain.gain.value, now);
+            active.gain.gain.linearRampToValueAtTime(0, now + 0.1);
+            active.nodes.forEach(function (o) { try { o.stop(now + 0.12); } catch (e) {} });
+        }
+        synthActive.delete(key);
+    }
+
+    // Single octave, 12 keys — a fixed drum-kit layout for "תופים" mode,
+    // in key order (C, C#, D, D#, E, F, F#, G, G#, A, A#, B).
+    const drumKit = ['kick', 'closedhat', 'snare', 'openhat', 'tom-low', 'tom-mid', 'tom-hi', 'clap', 'rim', 'shaker', 'conga', 'crash'];
+    let whiteKeyIndex = 0;
+    let keyIndex = 0;
+
+    octaves.forEach(octave => {
+        notes.forEach(note => {
+            const isBlack = note.includes('#');
+            const fullNote = note + octave;
+            const freq = noteNameToFreq(fullNote);
+            const drumSound = drumKit[keyIndex];
+            keyIndex++;
+            const key = document.createElement('div');
+            key.className = `key ${isBlack ? 'black-key' : 'white-key'}`;
+            key.dataset.note = fullNote;
+            key.dataset.isPlaying = "false";
+            keyByNote[fullNote] = key;
+
+            if (!isBlack) {
+                const img = document.createElement('img');
+                img.src = characterImages[whiteKeyIndex] || "";
+                img.className = 'character-img';
+                key.appendChild(img);
+                whiteKeyIndex++;
+            }
+
+            const playNote = () => {
+                if (key.dataset.isPlaying === "true") return;
+                key.dataset.isPlaying = "true";
+                key.classList.add('active');
+
+                if (currentMode === 'piano') {
+                    try { sampler.triggerAttack(fullNote); } catch (err) {}
+                } else if (currentMode === 'drums') {
+                    playDrum(drumSound);
+                } else {
+                    synthNoteOn(key, freq);
+                }
+
+                if (!songHit && songIdx < songNotes.length && player && player.getCurrentTime) {
+                    const cur = songNotes[songIdx];
+                    if (fullNote === cur.note) {
+                        const t = player.getCurrentTime();
+                        if (t >= cur.time - NOTE_LEAD && t <= cur.time + NOTE_TAIL) {
+                            songHit = true;
+                            key.classList.add('correct-flash');
+                            const star = document.createElement('div');
+                            star.className = 'star-pop';
+                            star.textContent = '⭐';
+                            key.appendChild(star);
+                            setTimeout(() => {
+                                key.classList.remove('correct-flash');
+                                star.remove();
+                            }, 550);
+                        }
+                    }
+                }
+            };
+
+            const stopNote = () => {
+                if (key.dataset.isPlaying === "false") return;
+                key.dataset.isPlaying = "false";
+                key.classList.remove('active');
+                if (currentMode === 'piano') {
+                    try { sampler.triggerRelease(fullNote); } catch (err) {}
+                } else if (currentMode !== 'drums') {
+                    synthNoteOff(key);
+                }
+            };
+
+            let isTouchActive = false;
+
+            key.addEventListener('pointerdown', () => {
+                if (isTouchActive) return;
+                isTouchActive = true;
+                playNote();
+            });
+            key.addEventListener('pointermove', (e) => e.preventDefault());
+            key.addEventListener('pointerup', () => { isTouchActive = false; stopNote(); });
+            key.addEventListener('pointerleave', () => { isTouchActive = false; stopNote(); });
+            key.addEventListener('pointercancel', () => { isTouchActive = false; stopNote(); });
+
+            pianoElement.appendChild(key);
+        });
+    });
+
+    // Responsive key sizing: fit 7 white keys to the width left over after
+    // the volume knob and cabinet chrome. Width has no low cap — on a big
+    // screen the piano is meant to look like a real, prominent instrument,
+    // not a small widget lost in empty space. Key height is derived from
+    // key width (not a fixed vh) so proportions stay realistic at any size,
+    // and the whole cabinet is capped by available vertical space so it
+    // never crowds the video out on a short window.
+    function sizeKeys() {
+        const totalWhiteKeys = 7;
+        // Two 96px mirror columns (one holds the knob, one is empty so the
+        // cabinet stays centered) + grid gaps + cabinet/keywell padding.
+        const reserved = 96 * 2 + 16 * 2 + 40;
+        const rawWidth = Math.min(pianoContainer.clientWidth, window.innerWidth);
+        const containerWidth = Math.max(220, rawWidth - reserved);
+
+        let whiteW = Math.floor(containerWidth / totalWhiteKeys);
+        whiteW = Math.max(24, Math.min(whiteW, 150));
+
+        // Split the space left after the speed bar/chrome roughly evenly
+        // between video and piano — but never let the piano take so much
+        // height that the video area's aspect ratio goes far past 16:9.
+        // On a wide-but-short window, giving the piano a flat 50% used to
+        // squeeze the video into a sliver, which YouTube then pillarboxes
+        // (black bars on the sides) since it keeps the video's real aspect.
+        const chromeH = 130;
+        const availableH = Math.max(320, window.innerHeight - chromeH);
+        // Standing rule across every song page: video gets ~45% of the
+        // available height, piano gets ~55% — a fixed split kept consistent
+        // site-to-site. If a specific video's own aspect ratio still causes
+        // trouble, handle that on its own page rather than bending this.
+        const maxKeyH = Math.max(160, availableH * 0.55);
+        let keyH = whiteW * 3.2;
+        if (keyH > maxKeyH) {
+            keyH = maxKeyH;
+            whiteW = Math.max(24, Math.floor(keyH / 3.2));
+        }
+
+        const blackW = Math.round(whiteW * 0.495);
+        const knobSize = Math.max(40, Math.min(78, Math.round(whiteW * 0.85)));
+
+        document.documentElement.style.setProperty('--white-w', whiteW + 'px');
+        document.documentElement.style.setProperty('--black-w', blackW + 'px');
+        document.documentElement.style.setProperty('--key-h', keyH + 'px');
+        document.documentElement.style.setProperty('--knob-size', knobSize + 'px');
+    }
+    window.addEventListener('resize', sizeKeys);
+    sizeKeys();
+    // Re-measure once layout has fully settled — an initial synchronous call
+    // can occasionally read a stale/incorrect container width before the
+    // viewport is fully applied.
+    window.addEventListener('load', sizeKeys);
+    requestAnimationFrame(sizeKeys);
+    setTimeout(sizeKeys, 400);
+    setTimeout(sizeKeys, 1200);
+
+    // Polls playback time, lights up the currently-due key (green outline,
+    // matching the video's own green-line cue), and advances past notes that
+    // were missed once their window closes — no penalty, it just moves on.
+    setInterval(() => {
+        if (!player || !player.getCurrentTime || songIdx >= songNotes.length) return;
+        const t = player.getCurrentTime();
+        const cur = songNotes[songIdx];
+        const keyEl = keyByNote[cur.note];
+        const inWindow = t >= cur.time - NOTE_LEAD && t <= cur.time + NOTE_TAIL;
+
+        if (keyEl) keyEl.classList.toggle('due', inWindow);
+
+        if (t > cur.time + NOTE_TAIL) {
+            if (keyEl) keyEl.classList.remove('due');
+            songIdx++;
+            songHit = false;
+        }
+    }, 100);
+
+    // Instrument switcher — "piano" keeps using the real Tone.Sampler above;
+    // the rest use the synthesized engines. Feedback logic doesn't need to
+    // know which is active since it only checks which key was pressed.
+    document.querySelectorAll('.inst-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            currentMode = btn.dataset.mode;
+            document.querySelectorAll('.inst-btn').forEach(function (b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+        });
+    });
+
+    // Radio-style volume knob (drag vertically to turn) controlling the
+    // shared masterGain that both the sampler/reverb and the synths use.
+    const knob = document.getElementById('volKnob');
+    const knobIndicator = knob.querySelector('.knob-indicator');
+    let knobAngle = (1 / 1.8) * 270 - 135;
+    function updateKnobVisual() { knobIndicator.style.transform = 'rotate(' + knobAngle + 'deg)'; }
+    updateKnobVisual();
+    let knobDragging = false, knobStartY = 0, knobStartAngle = 0;
+    knob.addEventListener('pointerdown', function (e) {
+        knobDragging = true; knobStartY = e.clientY; knobStartAngle = knobAngle;
+        knob.setPointerCapture(e.pointerId);
+    });
+    knob.addEventListener('pointermove', function (e) {
+        if (!knobDragging) return;
+        const dy = knobStartY - e.clientY;
+        knobAngle = Math.max(-135, Math.min(135, knobStartAngle + dy * 1.5));
+        updateKnobVisual();
+        masterGain.gain.value = (knobAngle + 135) / 270 * 1.8;
+    });
+    knob.addEventListener('pointerup', function () { knobDragging = false; });
+    knob.addEventListener('pointercancel', function () { knobDragging = false; });
+</script>
+</body>
+</html>
