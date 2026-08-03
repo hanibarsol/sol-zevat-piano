@@ -426,8 +426,8 @@
     // No calibrated song for "ארץ זבת חלב ודבש" yet — leave empty so the
     // due/correct feedback logic below simply never triggers, without
     // disabling it.
-    const songTimes = [];
-    const songLetters = [];
+    const songTimes = [3.94, 5.32, 6.04, 6.82, 7.86, 8.65, 11.07, 11.89, 12.66, 13.56, 15.73, 17.08, 17.87, 18.61, 19.65, 20.46, 22.87, 23.72, 24.48, 25.43, 27.80, 29.02, 30.06, 31.04, 31.98, 33.01, 34.79, 35.67, 36.55, 37.68, 39.68, 40.95, 41.93, 42.91, 43.82, 44.88, 46.69, 47.64, 48.43, 49.51];
+    const songLetters = ['D', 'D', 'C', 'C', 'D', 'D', 'D', 'E', 'C', 'D', 'D', 'D', 'C', 'C', 'D', 'D', 'D', 'E', 'C', 'D', 'G', 'A', 'F', 'F', 'F', 'F', 'F', 'G', 'E', 'F', 'G', 'A', 'F', 'F', 'F', 'F', 'F', 'G', 'E', 'D'];
     const songNotes = songTimes.map((t, i) => ({ time: t, note: songLetters[i] + '4' }));
 
     const NOTE_LEAD = 0.6;
