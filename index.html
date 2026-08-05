@@ -59,6 +59,28 @@
         }
         .mode-btn.active { background: var(--teal); color: #0a1210; border-color: var(--teal); font-weight: bold; }
 
+        /* Practice-only: toggles whether the video's own audio (the song +
+           Hani singing along) is heard while the child plays, independent
+           of the piano's own sound. Hidden outside practice mode. */
+        #audio-toggle {
+            touch-action: auto;
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: #262626;
+            color: rgba(255,255,255,0.35);
+            font-size: 17px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #audio-toggle.hidden { display: none; }
+        #audio-toggle.active {
+            background: radial-gradient(circle at 35% 30%, #4fa3ff, #1a5fc4 75%);
+            border-color: #7ec4ff;
+            color: #fff;
+            box-shadow: 0 0 8px 2px rgba(79,163,255,0.75);
+        }
+
         #speed-bar {
             flex: 0 0 auto;
             display: flex;
@@ -219,9 +241,6 @@
             100% { transform: translateX(-50%) scale(2.1); opacity: 0; }
         }
         .falling-note.hit { animation: bubble-pop 0.3s ease-out forwards; }
-        /* Missed: no freeze-and-fade — it keeps sinking (handled in JS)
-           and is just dimmed slightly so it still reads as "already past." */
-        .falling-note.missed { opacity: 0.55; }
 
         .piano {
             align-self: center;
@@ -402,8 +421,10 @@
     <div id="mode-bar">
         <button id="mode-watch" class="mode-btn active">👀 צפייה</button>
         <button id="mode-practice" class="mode-btn">🎹 תרגול</button>
+        <button id="audio-toggle" class="hidden active" title="ליווי קול">🔊</button>
     </div>
     <div id="speed-bar">
+        <button id="play-pause" class="speed-step-btn">⏸</button>
         <button id="speed-minus" class="speed-step-btn">－</button>
         <button id="speed-reset" class="is-normal">מהירות</button>
         <button id="speed-plus" class="speed-step-btn">＋</button>
@@ -445,6 +466,7 @@
     const noteLane = document.getElementById('note-lane');
     const modeWatchBtn = document.getElementById('mode-watch');
     const modePracticeBtn = document.getElementById('mode-practice');
+    const audioToggleBtn = document.getElementById('audio-toggle');
     const practiceHint = document.getElementById('practice-hint');
     let hintTimeout = null;
     function showPracticeHint() {
@@ -465,12 +487,27 @@
     // becomes the main thing to look at, so eyes don't have to jump
     // between a video up top and a keyboard down below.
     let mode = 'watch';
+    // Practice-only: whether the video's own audio (song + Hani singing
+    // along) plays while the child practices, independent of the piano's
+    // own sound. Defaults on — a young child just starting out benefits
+    // from that safety net; anyone who wants a solo, silent-backing
+    // experience can switch it off themselves.
+    let audioOn = true;
+    function applyAudioState() {
+        if (!player) return;
+        if (mode === 'practice' && !audioOn) {
+            if (player.mute) player.mute();
+        } else {
+            if (player.unMute) player.unMute();
+        }
+    }
     function setMode(next) {
         mode = next;
         videoWrap.classList.toggle('mini', mode === 'practice');
         noteLane.classList.toggle('hidden', mode !== 'practice');
         modeWatchBtn.classList.toggle('active', mode === 'watch');
         modePracticeBtn.classList.toggle('active', mode === 'practice');
+        audioToggleBtn.classList.toggle('hidden', mode !== 'practice');
         if (mode === 'watch') {
             activeTiles.forEach(tile => tile.remove());
             activeTiles.clear();
@@ -478,10 +515,17 @@
         } else {
             showPracticeHint();
         }
+        applyAudioState();
         sizeKeys();
     }
     modeWatchBtn.addEventListener('click', () => setMode('watch'));
     modePracticeBtn.addEventListener('click', () => setMode('practice'));
+    audioToggleBtn.addEventListener('click', () => {
+        audioOn = !audioOn;
+        audioToggleBtn.classList.toggle('active', audioOn);
+        audioToggleBtn.textContent = audioOn ? '🔊' : '🔇';
+        applyAudioState();
+    });
 
     // Calibration tool is dev-only: hidden from students, shown only when
     // building/checking a song's timing map via ?admin=1 in the URL.
@@ -533,6 +577,18 @@
     speedMinusBtn.addEventListener('click', () => applySpeed(speedIndex - 1));
     speedPlusBtn.addEventListener('click', () => applySpeed(speedIndex + 1));
     speedResetBtn.addEventListener('click', () => applySpeed(2));
+
+    // Pause/resume — the falling notes and due-highlight are both driven
+    // off player.getCurrentTime() every frame, so pausing the video just
+    // naturally freezes them in place too; nothing extra needed for that.
+    const playPauseBtn = document.getElementById('play-pause');
+    let isPaused = false;
+    playPauseBtn.addEventListener('click', () => {
+        if (!player) return;
+        isPaused = !isPaused;
+        if (isPaused) { player.pauseVideo(); playPauseBtn.textContent = '▶'; }
+        else { player.playVideo(); playPauseBtn.textContent = '⏸'; }
+    });
 
     // --- Calibration tool: tap "mark now" every time a character hits the green
     // line, and it logs the exact video timestamp. Not part of the kids' UI —
@@ -921,7 +977,12 @@
                     synthNoteOn(key, freq);
                 }
 
-                if (mode === 'practice' && !songHit && songIdx < songNotes.length && player && player.getCurrentTime) {
+                // Feedback runs in both modes now — Hani's own narration in
+                // the lesson video tells the child to press the key the
+                // moment a character reaches the video's green line, so
+                // "watch" was never meant to mean "don't play." Only the
+                // falling-note lane and mini-video are practice-only.
+                if (!songHit && songIdx < songNotes.length && player && player.getCurrentTime) {
                     const cur = songNotes[songIdx];
                     if (fullNote === cur.note) {
                         const t = player.getCurrentTime();
@@ -1000,6 +1061,11 @@
         const whiteWpx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--white-w')) || 0;
         const tileSize = whiteWpx * 0.6;
         const landTop = Math.max(0, laneH - tileSize);
+        // Past the line, progress keeps climbing above 1 (no upper clamp).
+        // Fade it out smoothly over that stretch so it dissolves before it
+        // would otherwise get abruptly clipped by the lane's own edge —
+        // that clip was the "flicker right before it disappears."
+        const progressCutoff = 1 + (NOTE_TAIL + 0.3) / FALL_DURATION;
         songNotes.forEach((n, i) => {
             const letter = n.note[0];
             const col = laneCols[letter];
@@ -1027,6 +1093,10 @@
                 if (!tile.classList.contains('hit')) {
                     const progress = Math.max(0, 1 - timeUntil / FALL_DURATION);
                     tile.style.top = (progress * landTop) + 'px';
+                    if (progress > 1) {
+                        const fade = Math.min(1, (progress - 1) / (progressCutoff - 1));
+                        tile.style.opacity = String(Math.max(0, 1 - fade));
+                    }
                 }
             } else if (tile) {
                 tile.remove();
@@ -1043,15 +1113,6 @@
         setTimeout(() => tile.remove(), 300);
     }
 
-    function markTileMissed(index) {
-        // Just dims it — deliberately doesn't remove it from activeTiles or
-        // the DOM. It stays tracked so renderFallingLane keeps sinking it
-        // like normal; natural cleanup (once it scrolls out of the visible
-        // window) is what finally removes it and frees its column slot.
-        const tile = activeTiles.get(index);
-        if (!tile) return;
-        tile.classList.add('missed');
-    }
 
     (function fallLoop() {
         if (player && player.getCurrentTime) renderFallingLane(player.getCurrentTime());
@@ -1136,11 +1197,10 @@
         const keyEl = keyByNote[cur.note];
         const inWindow = t >= cur.time - NOTE_LEAD && t <= cur.time + NOTE_TAIL;
 
-        if (mode === 'practice' && keyEl) keyEl.classList.toggle('due', inWindow);
+        if (keyEl) keyEl.classList.toggle('due', inWindow);
 
         if (t > cur.time + NOTE_TAIL) {
             if (keyEl) keyEl.classList.remove('due');
-            if (mode === 'practice' && !songHit) markTileMissed(songIdx);
             songIdx++;
             songHit = false;
         }
