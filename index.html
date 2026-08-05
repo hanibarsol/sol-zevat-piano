@@ -419,8 +419,11 @@
         <div id="lesson-video"></div>
     </div>
     <div id="mode-bar">
-        <button id="mode-watch" class="mode-btn active">👀 צפייה</button>
-        <button id="mode-practice" class="mode-btn">🎹 תרגול</button>
+        <!-- This song has no watch-along video of Hani narrating — it opens
+             straight into practice, so the watch/practice choice is hidden
+             (not removed from the DOM, so the shared JS logic stays intact). -->
+        <button id="mode-watch" class="mode-btn active" style="display:none">👀 צפייה</button>
+        <button id="mode-practice" class="mode-btn" style="display:none">🎹 תרגול</button>
         <button id="audio-toggle" class="hidden active" title="ליווי קול">🔊</button>
     </div>
     <div id="speed-bar">
@@ -1210,11 +1213,9 @@
     // (the real Tone.Sampler) — this keeps the focus on the falling-note
     // lane itself rather than on choosing sounds.
 
-    // ?mode=practice lets a link open straight into practice mode (same
-    // convenience pattern as the existing ?admin=1 for calibration).
-    if (new URLSearchParams(location.search).get('mode') === 'practice') {
-        setMode('practice');
-    }
+    // No watch-along video for this song — always opens straight into
+    // practice mode, no toggle needed.
+    setMode('practice');
 </script>
 </body>
 </html>
