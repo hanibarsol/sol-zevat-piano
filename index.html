@@ -181,36 +181,47 @@
             border-right: 1px solid rgba(255,255,255,0.05);
         }
         .note-lane-col:last-child { border-right: none; }
+        /* Flush with the keys — tinted a greener turquoise than the
+           cabinet-lip strip so it still reads as its own distinct
+           "special LED" rather than blending into the lane background. */
         #note-lane-hitline {
-            position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
-            background: linear-gradient(90deg, var(--teal), #d8fbf5, var(--teal));
-            box-shadow: 0 0 8px rgba(111,214,201,0.75);
-        }
-        /* Pulses right as a falling character reaches it — the "press now"
-           moment, called out instead of left implicit. */
-        #note-lane-hitline.active { animation: hitline-pulse 0.5s ease-in-out infinite; }
-        @keyframes hitline-pulse {
-            0%, 100% { height: 3px; box-shadow: 0 0 8px rgba(111,214,201,0.75); }
-            50% { height: 6px; box-shadow: 0 0 18px 5px rgba(111,214,201,1); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-            #note-lane-hitline.active { animation: none; box-shadow: 0 0 18px 5px rgba(111,214,201,1); }
+            position: absolute; left: 0; right: 0; bottom: 0; height: 4px;
+            border-radius: 2px;
+            background: linear-gradient(90deg, #29c98f, #baf7d9, #29c98f);
+            box-shadow: 0 0 9px rgba(41,201,143,0.8), inset 0 0 2px rgba(255,255,255,0.6);
         }
         .falling-note {
             position: absolute;
             top: 0;
             left: 50%;
-            width: calc(var(--white-w) * 0.74);
-            height: calc(var(--white-w) * 0.74);
-            margin-left: calc(var(--white-w) * -0.37);
+            width: calc(var(--white-w) * 0.6);
+            height: calc(var(--white-w) * 0.6);
+            transform: translateX(-50%);
             border-radius: 50%;
             overflow: hidden;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.15);
+            border: 2px solid rgba(0,0,0,0.85);
+            /* Soft white LED-style halo around the ring, on top of the
+               grounding drop shadow. */
+            box-shadow: 0 2px 6px rgba(0,0,0,0.5), 0 0 10px 2px rgba(255,255,255,0.65);
             background: #333;
+            pointer-events: none;
         }
-        .falling-note img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .falling-note.hit { transition: transform 0.22s ease-out, opacity 0.22s ease-out; transform: scale(1.5); opacity: 0; box-shadow: 0 0 16px 4px rgba(224,168,63,0.85); }
-        .falling-note.missed { transition: opacity 0.3s ease-out; opacity: 0.15; }
+        /* object-fit: contain (not cover) — cover was cropping into a
+           mostly-transparent margin around the character at random,
+           different amounts every time, which read as "unstable." contain
+           always shows the whole figure, consistently framed. */
+        .falling-note img { width: 100%; height: 100%; object-fit: contain; display: block; }
+        /* Correct-in-time press: pop like a bubble — a quick anticipatory
+           squash, then a fast burst-and-vanish — instead of a plain fade. */
+        @keyframes bubble-pop {
+            0%   { transform: translateX(-50%) scale(1); opacity: 1; }
+            30%  { transform: translateX(-50%) scale(0.85); opacity: 1; }
+            100% { transform: translateX(-50%) scale(2.1); opacity: 0; }
+        }
+        .falling-note.hit { animation: bubble-pop 0.3s ease-out forwards; }
+        /* Missed: no freeze-and-fade — it keeps sinking (handled in JS)
+           and is just dimmed slightly so it still reads as "already past." */
+        .falling-note.missed { opacity: 0.55; }
 
         .piano {
             align-self: center;
@@ -240,6 +251,47 @@
         }
 
         .white-key { width: var(--white-w); height: 100%; background-color: white; border-radius: 0 0 5px 5px; }
+
+        /* "Fills up like a glass of water" — rises a notch with every
+           correct-in-time press, behind the character but above the key's
+           own background, so by the end of the song each key shows its
+           own little results bar. */
+        .key-fill {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 0%;
+            z-index: -1;
+            pointer-events: none;
+            border-radius: 0 0 5px 5px;
+            background: linear-gradient(180deg, rgba(130,226,255,0.4), rgba(41,150,201,0.75));
+            transition: height 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .key-fill::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: rgba(255,255,255,0.85);
+            box-shadow: 0 0 6px rgba(255,255,255,0.85);
+            transform-origin: 50% 50%;
+        }
+        /* A brief splash right when the level rises, then it settles and
+           stays still — a constant infinite wobble was too much motion to
+           have sitting there the whole song, distracting from the actual
+           falling notes. */
+        .key-fill.pouring::after {
+            animation: water-sway 0.9s ease-out 1;
+        }
+        @keyframes water-sway {
+            0%   { transform: rotate(0deg) translateY(0); }
+            20%  { transform: rotate(-6deg) translateY(0); }
+            45%  { transform: rotate(4deg) translateY(-2px); }
+            70%  { transform: rotate(-2deg) translateY(0); }
+            100% { transform: rotate(0deg) translateY(0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .key-fill.pouring::after { animation: none; }
+        }
 
         .black-key {
             width: var(--black-w);
@@ -530,6 +582,36 @@
     const songLetters = ['D', 'D', 'C', 'C', 'D', 'D', 'D', 'E', 'C', 'D', 'D', 'D', 'C', 'C', 'D', 'D', 'D', 'E', 'C', 'D', 'G', 'A', 'F', 'F', 'F', 'F', 'F', 'G', 'E', 'F', 'G', 'A', 'F', 'F', 'F', 'F', 'F', 'G', 'E', 'D'];
     const songNotes = songTimes.map((t, i) => ({ time: t, note: songLetters[i] + '4' }));
 
+    // Per-key "fill" progress (idea: each correct-in-time press fills up
+    // the key a little, like pouring water into a glass — by the end of
+    // the song, how full each key got shows how well that note went).
+    // Denominator is how many times that exact key is due across the
+    // whole song; numerator is how many of those were hit correctly.
+    const songNoteTotals = {};
+    songNotes.forEach(n => { songNoteTotals[n.note] = (songNoteTotals[n.note] || 0) + 1; });
+    const songNoteCorrect = {};
+    const keyFillEls = {};
+    function fillKey(note) {
+        const total = songNoteTotals[note];
+        const fillEl = keyFillEls[note];
+        const keyEl = keyByNote[note];
+        if (!total || !fillEl || !keyEl) return;
+        songNoteCorrect[note] = (songNoteCorrect[note] || 0) + 1;
+        const pct = Math.min(1, songNoteCorrect[note] / total);
+        // Pixels, not a CSS percentage — sidesteps any ambiguity about
+        // whether the key's own height counts as "definite" for percentage
+        // resolution on an absolutely positioned child.
+        fillEl.style.height = Math.round(pct * keyEl.clientHeight) + 'px';
+
+        // Brief splash on the surface line, then it settles still — retrigger
+        // the animation even if it's already mid-splash from a moment ago.
+        fillEl.classList.remove('pouring');
+        void fillEl.offsetWidth;
+        fillEl.classList.add('pouring');
+        clearTimeout(fillEl._pourTimeout);
+        fillEl._pourTimeout = setTimeout(() => fillEl.classList.remove('pouring'), 900);
+    }
+
     const NOTE_LEAD = 0.6;
     const NOTE_TAIL = 0.45;
     let songIdx = 0;
@@ -577,7 +659,7 @@
 
     // A subtle reverb gives the notes a gentle "sustain pedal" quality —
     // like they keep resonating in the room rather than stopping dead.
-    const reverb = new Tone.Reverb({ decay: 2.5, wet: 0.22 }).connect(masterGain);
+    const reverb = new Tone.Reverb({ decay: 2.5, wet: 0.32 }).connect(masterGain);
 
     const sampler = new Tone.Sampler({
         urls: sampleUrls,
@@ -810,6 +892,13 @@
             key.dataset.isPlaying = "false";
             keyByNote[fullNote] = key;
 
+            if (songNoteTotals[fullNote]) {
+                const fillEl = document.createElement('div');
+                fillEl.className = 'key-fill';
+                key.appendChild(fillEl);
+                keyFillEls[fullNote] = fillEl;
+            }
+
             if (!isBlack) {
                 const img = document.createElement('img');
                 img.src = characterImages[whiteKeyIndex] || "";
@@ -839,6 +928,7 @@
                         if (t >= cur.time - NOTE_LEAD && t <= cur.time + NOTE_TAIL) {
                             songHit = true;
                             markTileHit(songIdx);
+                            fillKey(fullNote);
                             key.classList.add('correct-flash');
                             const star = document.createElement('div');
                             star.className = 'star-pop';
@@ -902,17 +992,14 @@
     const FALL_DURATION = 2.4;
     const activeTiles = new Map(); // songNotes index -> tile element
 
-    // How close (in seconds) a falling tile has to be to the hit-line
-    // before the line itself starts pulsing — the explicit "press now"
-    // signal, instead of expecting the falling motion alone to be read
-    // as a countdown.
-    const HITLINE_PULSE_WINDOW = 0.35;
-
     function renderFallingLane(t) {
         if (mode !== 'practice') return;
         const laneH = noteLane.clientHeight;
         if (!laneH) return;
-        let pulseHitline = false;
+        // Lands so the tile's own bottom edge meets the hit-line, not its top.
+        const whiteWpx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--white-w')) || 0;
+        const tileSize = whiteWpx * 0.6;
+        const landTop = Math.max(0, laneH - tileSize);
         songNotes.forEach((n, i) => {
             const letter = n.note[0];
             const col = laneCols[letter];
@@ -922,6 +1009,9 @@
             let tile = activeTiles.get(i);
             if (visible) {
                 if (!tile) {
+                    // Always centered — same-letter notes close together in
+                    // time fall in the same spot, on purpose (their spacing
+                    // comes from timing, not from being nudged sideways).
                     tile = document.createElement('div');
                     tile.className = 'falling-note';
                     const img = document.createElement('img');
@@ -930,17 +1020,19 @@
                     col.appendChild(tile);
                     activeTiles.set(i, tile);
                 }
-                if (!tile.classList.contains('hit') && !tile.classList.contains('missed')) {
-                    const progress = Math.min(1, Math.max(0, 1 - timeUntil / FALL_DURATION));
-                    tile.style.top = (progress * Math.max(0, laneH - 4)) + 'px';
-                    if (Math.abs(timeUntil) <= HITLINE_PULSE_WINDOW) pulseHitline = true;
+                // Only a correct hit freezes it (it's popping and vanishing
+                // via its own animation). A missed note keeps sinking all
+                // the way down and off — falling past the line is what
+                // "too late" looks like, rather than hovering there fading.
+                if (!tile.classList.contains('hit')) {
+                    const progress = Math.max(0, 1 - timeUntil / FALL_DURATION);
+                    tile.style.top = (progress * landTop) + 'px';
                 }
             } else if (tile) {
                 tile.remove();
                 activeTiles.delete(i);
             }
         });
-        hitLine.classList.toggle('active', pulseHitline);
     }
 
     function markTileHit(index) {
@@ -948,15 +1040,17 @@
         if (!tile) return;
         tile.classList.add('hit');
         activeTiles.delete(index);
-        setTimeout(() => tile.remove(), 260);
+        setTimeout(() => tile.remove(), 300);
     }
 
     function markTileMissed(index) {
+        // Just dims it — deliberately doesn't remove it from activeTiles or
+        // the DOM. It stays tracked so renderFallingLane keeps sinking it
+        // like normal; natural cleanup (once it scrolls out of the visible
+        // window) is what finally removes it and frees its column slot.
         const tile = activeTiles.get(index);
         if (!tile) return;
         tile.classList.add('missed');
-        activeTiles.delete(index);
-        setTimeout(() => tile.remove(), 320);
     }
 
     (function fallLoop() {
