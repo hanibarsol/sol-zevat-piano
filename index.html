@@ -71,6 +71,7 @@
             display: flex;
             align-items: center;
             gap: 6px;
+            cursor: pointer;
         }
         #audio-toggle-wrap.hidden { display: none; }
         #audio-toggle {
@@ -92,8 +93,15 @@
             box-shadow: 0 0 8px 2px rgba(79,163,255,0.75);
         }
         #audio-toggle-label {
-            font-size: 12px;
-            color: #7ec4ff;
+            touch-action: auto;
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 20px;
+            padding: 9px 20px;
+            font-size: 15px;
+            font-family: Arial, sans-serif;
+            background: #262626;
+            color: rgba(255,255,255,0.6);
+            cursor: pointer;
             white-space: nowrap;
         }
 
@@ -195,9 +203,9 @@
             background: rgba(0,0,0,0.8);
             border: 1px solid rgba(111,214,201,0.4);
             color: #fff;
-            padding: 7px 16px;
+            padding: 8px 18px;
             border-radius: 20px;
-            font-size: 13px;
+            font-size: 16px;
             white-space: nowrap;
             z-index: 60;
             opacity: 1;
@@ -450,7 +458,7 @@
         <button id="mode-practice" class="mode-btn" style="display:none">🎹 תרגול</button>
         <div id="audio-toggle-wrap" class="hidden">
             <button id="audio-toggle" title="ליווי קול">🔇</button>
-            <span id="audio-toggle-label">חני, תשירי ותנגני איתי</span>
+            <span id="audio-toggle-label">חני, תנגני איתי</span>
         </div>
     </div>
     <div id="speed-bar">
@@ -465,7 +473,7 @@
             <div id="cabinet">
                 <div id="cabinet-lip"></div>
                 <div id="keywell">
-                    <div id="practice-hint" class="hidden">לחצי על הקליד כשהדמות מגיעה לקו! 👇</div>
+                    <div id="practice-hint" class="hidden">לחצו על הקליד כשהדמות מגיעה לקו&#8207;! 👇</div>
                     <div id="note-lane" class="hidden"></div>
                     <div class="piano" id="piano"></div>
                 </div>
