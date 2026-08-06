@@ -639,6 +639,7 @@
             player.playVideo();
             songIdx = 0;
             songHit = false;
+            resetKeyFills();
             isPaused = false;
             playPauseBtn.textContent = '⏸';
             return;
@@ -724,6 +725,17 @@
         fillEl.classList.add('pouring');
         clearTimeout(fillEl._pourTimeout);
         fillEl._pourTimeout = setTimeout(() => fillEl.classList.remove('pouring'), 900);
+    }
+
+    // Starting the song over should start the results over too — otherwise
+    // a key already "full" from the last attempt stays full forever, which
+    // stops meaning anything.
+    function resetKeyFills() {
+        Object.keys(songNoteCorrect).forEach(note => { delete songNoteCorrect[note]; });
+        Object.values(keyFillEls).forEach(el => {
+            el.classList.remove('pouring');
+            el.style.height = '0px';
+        });
     }
 
     const NOTE_LEAD = 0.6;
