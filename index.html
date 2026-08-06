@@ -573,7 +573,15 @@
             videoId: 'wV1enhokhAA',
             playerVars: { playsinline: 1, rel: 0 },
             events: {
-                onReady: () => { if (pendingPlay) player.playVideo(); },
+                onReady: () => {
+                    // applyAudioState() may have already run once, before
+                    // the player existed (e.g. songs that call
+                    // setMode('practice') immediately on load) — it was a
+                    // no-op then, so re-apply now that mute()/unMute() are
+                    // actually callable.
+                    applyAudioState();
+                    if (pendingPlay) player.playVideo();
+                },
                 onStateChange: (e) => {
                     // Once the song ends there was no way back in — flip
                     // the pause button into a "play again" state instead of
