@@ -545,7 +545,16 @@
             videoId: 'wV1enhokhAA',
             playerVars: { playsinline: 1, rel: 0 },
             events: {
-                onReady: () => { if (pendingPlay) player.playVideo(); }
+                onReady: () => { if (pendingPlay) player.playVideo(); },
+                onStateChange: (e) => {
+                    // Once the song ends there was no way back in — flip
+                    // the pause button into a "play again" state instead of
+                    // leaving a dead, unresponsive-looking control.
+                    if (e.data === YT.PlayerState.ENDED) {
+                        isPaused = true;
+                        playPauseBtn.textContent = '🔁';
+                    }
+                }
             }
         });
     };
@@ -588,6 +597,17 @@
     let isPaused = false;
     playPauseBtn.addEventListener('click', () => {
         if (!player) return;
+        if (player.getPlayerState && player.getPlayerState() === YT.PlayerState.ENDED) {
+            // Song's over — this click means "play it again from the top,"
+            // not "resume," so also reset the note-timing feedback state.
+            player.seekTo(0);
+            player.playVideo();
+            songIdx = 0;
+            songHit = false;
+            isPaused = false;
+            playPauseBtn.textContent = '⏸';
+            return;
+        }
         isPaused = !isPaused;
         if (isPaused) { player.pauseVideo(); playPauseBtn.textContent = '▶'; }
         else { player.playVideo(); playPauseBtn.textContent = '⏸'; }
