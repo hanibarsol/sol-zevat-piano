@@ -1447,6 +1447,12 @@
     // tile are both practice-mode-only: in watch mode nothing is being
     // graded, so nothing should look like it's demanding a correct key.
     setInterval(() => {
+        // This loop drives the timed-practice due-highlight/songIdx off the
+        // (possibly paused) player clock — without this guard it kept
+        // running under "לנסות לבד" too, and since pausing freezes time
+        // rather than stopping the interval, it would re-apply a stale
+        // "due" highlight moments after solo mode had just cleared it.
+        if (soloMode) return;
         if (!player || !player.getCurrentTime || songIdx >= songNotes.length) return;
         const t = player.getCurrentTime();
         const cur = songNotes[songIdx];
