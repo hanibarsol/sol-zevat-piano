@@ -265,6 +265,70 @@
            different amounts every time, which read as "unstable." contain
            always shows the whole figure, consistently framed. */
         .falling-note img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+        /* "אני רוצה לנסות לבד" — an alternate, self-paced view: instead of
+           notes falling with the video/audio driving the timing, every note
+           in the song sits laid out left-to-right on a music staff, at its
+           real pitch height, and the child works through them at their own
+           pace with no clock pushing them forward. */
+        #solo-btn {
+            touch-action: auto;
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 20px;
+            padding: 9px 20px;
+            font-size: 15px;
+            font-family: Arial, sans-serif;
+            background: #262626;
+            color: rgba(255,255,255,0.6);
+            cursor: pointer;
+        }
+        #solo-btn.active { background: var(--teal); color: #0a1210; border-color: var(--teal); font-weight: bold; }
+        #staff-wrap {
+            position: relative;
+            height: var(--staff-h, 150px);
+            overflow-x: auto;
+            overflow-y: hidden;
+            border-radius: 8px 8px 0 0;
+            background: linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.32));
+            margin-bottom: 6px;
+            display: none;
+        }
+        #staff-wrap.active { display: block; }
+        #staff-inner { position: relative; height: 100%; }
+        .staff-line {
+            position: absolute;
+            left: 0; right: 0;
+            height: 2px;
+            background: rgba(255,255,255,0.32);
+        }
+        .staff-ledger {
+            position: absolute;
+            height: 2px;
+            background: rgba(255,255,255,0.32);
+            transform: translate(-50%, -50%);
+        }
+        .staff-note {
+            position: absolute;
+            transform: translate(-50%, -50%);
+        }
+        .staff-note-avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid rgba(0,0,0,0.85);
+            background: #333;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.5), 0 0 10px 2px rgba(255,255,255,0.55);
+        }
+        .staff-note-avatar img { width: 100%; height: 100%; object-fit: contain; display: block; }
+        /* Already played correctly — lights up teal and stays lit, so the
+           child can see their progress through the whole line at a glance.
+           No "play this next" hint on purpose — the point of this mode is
+           reading the staff independently, not being told what's next. */
+        .staff-note.done .staff-note-avatar {
+            border-color: var(--teal);
+            box-shadow: 0 0 12px 4px rgba(111,214,201,0.9);
+        }
         /* Correct-in-time press: pop like a bubble — a quick anticipatory
            squash, then a fast burst-and-vanish — instead of a plain fade. */
         @keyframes bubble-pop {
@@ -459,6 +523,7 @@
             <button id="audio-toggle" title="ליווי קול">🔇</button>
             <span id="audio-toggle-label">חני, תנגני איתי</span>
         </div>
+        <button id="solo-btn">אני רוצה לנסות לבד</button>
     </div>
     <div id="speed-bar">
         <button id="play-pause" class="speed-step-btn">⏸</button>
@@ -474,6 +539,7 @@
                 <div id="keywell">
                     <div id="practice-hint" class="hidden">לחצו על הקליד כשהדמות מגיעה לקו 👇</div>
                     <div id="note-lane" class="hidden"></div>
+                    <div id="staff-wrap"><div id="staff-inner"></div></div>
                     <div class="piano" id="piano"></div>
                 </div>
             </div>
@@ -563,6 +629,99 @@
         audioToggleBtn.classList.toggle('active', audioOn);
         audioToggleBtn.textContent = audioOn ? '🔊' : '🔇';
         applyAudioState();
+    });
+
+    // --- "אני רוצה לנסות לבד" — self-paced staff view. Every note in the
+    // song is laid out once, left to right in order, at its real pitch
+    // height on a 5-line staff (do sits on a ledger line below the staff,
+    // same as real sheet music). No falling animation, no audio timing —
+    // the child just works through the sequence at their own pace.
+    let soloMode = false;
+    let soloIdx = 0;
+    const soloBtn = document.getElementById('solo-btn');
+    const staffWrap = document.getElementById('staff-wrap');
+    const staffInner = document.getElementById('staff-inner');
+    const staffNoteEls = [];
+    const STAFF_PITCH_Y = { C: 60, D: 54, E: 48, F: 42, G: 36, A: 30, B: 24 };
+
+    function buildStaff() {
+        staffInner.innerHTML = '';
+        staffNoteEls.length = 0;
+        const wrapH = staffWrap.clientHeight || 150;
+        const offsetY = Math.max(10, (wrapH - 60) / 2);
+        [0, 12, 24, 36, 48].forEach(y => {
+            const line = document.createElement('div');
+            line.className = 'staff-line';
+            line.style.top = (y + offsetY) + 'px';
+            staffInner.appendChild(line);
+        });
+        const whiteWpx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--white-w')) || 50;
+        const noteSize = whiteWpx * 0.5;
+        const spacing = noteSize * 1.35;
+        staffInner.style.width = (songNotes.length * spacing + 40) + 'px';
+        songNotes.forEach((n, i) => {
+            const letter = n.note[0];
+            const y = STAFF_PITCH_Y[letter] + offsetY;
+            const x = 30 + i * spacing;
+            if (letter === 'C') {
+                const ledger = document.createElement('div');
+                ledger.className = 'staff-ledger';
+                ledger.style.left = x + 'px';
+                ledger.style.top = y + 'px';
+                ledger.style.width = (noteSize * 1.3) + 'px';
+                staffInner.appendChild(ledger);
+            }
+            const note = document.createElement('div');
+            note.className = 'staff-note';
+            note.style.left = x + 'px';
+            note.style.top = y + 'px';
+            note.style.width = noteSize + 'px';
+            note.style.height = noteSize + 'px';
+            const avatar = document.createElement('div');
+            avatar.className = 'staff-note-avatar';
+            const img = document.createElement('img');
+            img.src = characterImages[noteLetterOrder.indexOf(letter)] || '';
+            avatar.appendChild(img);
+            note.appendChild(avatar);
+            staffInner.appendChild(note);
+            staffNoteEls.push(note);
+        });
+        updateStaffScroll();
+    }
+
+    function markStaffNoteDone(index) {
+        const el = staffNoteEls[index];
+        if (el) el.classList.add('done');
+    }
+
+    function updateStaffScroll() {
+        const cur = staffNoteEls[soloIdx];
+        if (cur) cur.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+    }
+
+    soloBtn.addEventListener('click', () => {
+        soloMode = !soloMode;
+        soloBtn.classList.toggle('active', soloMode);
+        soloBtn.textContent = soloMode ? 'חזרה לתרגול הרגיל' : 'אני רוצה לנסות לבד';
+        if (soloMode) {
+            if (player && player.pauseVideo) player.pauseVideo();
+            isPaused = true;
+            playPauseBtn.textContent = '▶';
+            noteLane.classList.add('hidden');
+            staffWrap.classList.add('active');
+            soloIdx = 0;
+            staffNoteEls.forEach(el => el.classList.remove('done'));
+            buildStaff();
+            dismissPracticeHint();
+            // Leftover state from the timed practice mode shouldn't carry
+            // into a fresh "לנסות לבד" attempt.
+            Object.values(keyByNote).forEach(el => el.classList.remove('due'));
+            resetKeyFills();
+        } else {
+            staffWrap.classList.remove('active');
+            noteLane.classList.remove('hidden'); // this lesson is always in practice mode
+        }
+        sizeKeys();
     });
 
     // Calibration tool is dev-only: hidden from students, shown only when
@@ -1055,12 +1214,30 @@
                     synthNoteOn(key, freq);
                 }
 
-                // Feedback runs in both modes now — Hani's own narration in
-                // the lesson video tells the child to press the key the
-                // moment a character reaches the video's green line, so
-                // "watch" was never meant to mean "don't play." Only the
-                // falling-note lane and mini-video are practice-only.
-                if (!songHit && songIdx < songNotes.length && player && player.getCurrentTime) {
+                if (soloMode) {
+                    // Self-paced: "correct" just means "the right next note
+                    // in the sequence," with no clock involved at all.
+                    if (soloIdx < songNotes.length && fullNote === songNotes[soloIdx].note) {
+                        fillKey(fullNote);
+                        key.classList.add('correct-flash');
+                        const star = document.createElement('div');
+                        star.className = 'star-pop';
+                        star.textContent = '⭐';
+                        key.appendChild(star);
+                        setTimeout(() => {
+                            key.classList.remove('correct-flash');
+                            star.remove();
+                        }, 550);
+                        markStaffNoteDone(soloIdx);
+                        soloIdx++;
+                        updateStaffScroll();
+                    }
+                } else if (!songHit && songIdx < songNotes.length && player && player.getCurrentTime) {
+                    // Feedback runs in both modes now — Hani's own narration in
+                    // the lesson video tells the child to press the key the
+                    // moment a character reaches the video's green line, so
+                    // "watch" was never meant to mean "don't play." Only the
+                    // falling-note lane and mini-video are practice-only.
                     const cur = songNotes[songIdx];
                     if (fullNote === cur.note) {
                         const t = player.getCurrentTime();
@@ -1253,6 +1430,7 @@
         document.documentElement.style.setProperty('--black-w', blackW + 'px');
         document.documentElement.style.setProperty('--key-h', keyH + 'px');
         document.documentElement.style.setProperty('--lane-h', laneH + 'px');
+        document.documentElement.style.setProperty('--staff-h', laneH + 'px');
     }
     window.addEventListener('resize', sizeKeys);
     sizeKeys();
