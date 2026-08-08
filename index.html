@@ -285,6 +285,13 @@
         #solo-btn.active { background: var(--teal); color: #0a1210; border-color: var(--teal); font-weight: bold; }
         #staff-wrap {
             position: relative;
+            /* Tied to the piano's own width (7 white keys) — without this,
+               #cabinet's width:fit-content let the staff's full, unclipped
+               content (however many notes long) stretch the whole cabinet
+               to match it instead of scrolling inside a bounded box, which
+               on a narrow phone blew the piano itself far past the keys'
+               own real, already-correct width. */
+            width: calc(var(--white-w) * 7);
             height: var(--staff-h, 150px);
             overflow-x: auto;
             overflow-y: hidden;
