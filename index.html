@@ -786,8 +786,17 @@
     const melodyBtn = document.getElementById('melody-btn');
     const melodyAudio = document.getElementById('melody-audio');
     melodyBtn.addEventListener('click', () => {
-        if (melodyBtn.classList.contains('playing')) return;
+        if (melodyBtn.classList.contains('playing')) {
+            // Tapping again mid-playback stops it early — nothing here
+            // should force a full, uninterruptible listen.
+            melodyAudio.pause();
+            melodyBtn.classList.remove('playing');
+            melodyBtn.textContent = '🎵 ככה השיר נשמע';
+            pianoElement.classList.remove('melody-playing');
+            return;
+        }
         melodyBtn.classList.add('playing');
+        melodyBtn.textContent = '⏹ עצירה';
         pianoElement.classList.add('melody-playing');
         if (player) player.pauseVideo();
         isPaused = true;
@@ -797,6 +806,7 @@
     });
     melodyAudio.addEventListener('ended', () => {
         melodyBtn.classList.remove('playing');
+        melodyBtn.textContent = '🎵 ככה השיר נשמע';
         pianoElement.classList.remove('melody-playing');
     });
 
