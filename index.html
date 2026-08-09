@@ -244,6 +244,26 @@
             cursor: pointer;
         }
         #solo-btn.active { background: var(--teal); color: #0a1210; border-color: var(--teal); font-weight: bold; }
+
+        /* "ככה השיר נשמע" — a short reference clip of Hani playing+singing
+           the taught segment, so a child who's pressing the right notes but
+           can't recognize the tune in them has somewhere to actually hear it,
+           in the scale she played it in. Plays start-to-finish on its own —
+           never layered under the child's own playing — so the piano goes
+           inert for that moment instead of inviting a confusing double-take. */
+        #melody-btn {
+            touch-action: auto;
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 20px;
+            padding: 9px 20px;
+            font-size: 15px;
+            font-family: Arial, sans-serif;
+            background: #262626;
+            color: #fff;
+            cursor: pointer;
+        }
+        #melody-btn.playing { background: var(--gold); color: #2a1c00; border-color: var(--gold); font-weight: bold; }
+        .piano.melody-playing { pointer-events: none; opacity: 0.55; }
         #staff-wrap {
             position: relative;
             /* Tied to the piano's own width (7 white keys) — without this,
@@ -481,12 +501,14 @@
     <div id="video-wrap">
         <div id="lesson-video"></div>
     </div>
+    <audio id="melody-audio" src="melody.mp3" preload="none"></audio>
     <div id="mode-bar">
         <!-- This song has no watch-along video of Hani narrating — it opens
              straight into practice, so the watch/practice choice is hidden
              (not removed from the DOM, so the shared JS logic stays intact). -->
         <button id="mode-watch" class="mode-btn active" style="display:none">👀 צפייה</button>
         <button id="mode-practice" class="mode-btn" style="display:none">🎹 תרגול</button>
+        <button id="melody-btn">🎵 ככה השיר נשמע</button>
         <button id="solo-btn">אני רוצה לנסות לבד</button>
     </div>
     <div id="speed-bar">
@@ -755,6 +777,25 @@
         isPaused = !isPaused;
         if (isPaused) { player.pauseVideo(); playPauseBtn.textContent = '▶'; }
         else { player.playVideo(); playPauseBtn.textContent = '⏸'; }
+    });
+
+    // "ככה השיר נשמע" — plays start-to-finish on its own, never mixed with
+    // the child's own playing, so the piano goes inert for that moment.
+    const melodyBtn = document.getElementById('melody-btn');
+    const melodyAudio = document.getElementById('melody-audio');
+    melodyBtn.addEventListener('click', () => {
+        if (melodyBtn.classList.contains('playing')) return;
+        melodyBtn.classList.add('playing');
+        pianoElement.classList.add('melody-playing');
+        if (player) player.pauseVideo();
+        isPaused = true;
+        playPauseBtn.textContent = '▶';
+        melodyAudio.currentTime = 0;
+        melodyAudio.play();
+    });
+    melodyAudio.addEventListener('ended', () => {
+        melodyBtn.classList.remove('playing');
+        pianoElement.classList.remove('melody-playing');
     });
 
     // --- Calibration tool: tap "mark now" every time a character hits the green
