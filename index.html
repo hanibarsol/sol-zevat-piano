@@ -579,8 +579,6 @@
     const noteLane = document.getElementById('note-lane');
     const modeWatchBtn = document.getElementById('mode-watch');
     const modePracticeBtn = document.getElementById('mode-practice');
-    const audioToggleBtn = document.getElementById('audio-toggle');
-    const audioToggleWrap = document.getElementById('audio-toggle-wrap');
     const practiceHint = document.getElementById('practice-hint');
     let hintTimeout = null;
     function showPracticeHint() {
@@ -601,26 +599,12 @@
     // becomes the main thing to look at, so eyes don't have to jump
     // between a video up top and a keyboard down below.
     let mode = 'watch';
-    // Practice-only: whether the video's own audio (song + Hani singing
-    // along) plays while the child practices, independent of the piano's
-    // own sound. Defaults OFF — nothing plays unasked; a child/parent who
-    // wants the singing accompaniment switches it on deliberately.
-    let audioOn = false;
-    function applyAudioState() {
-        if (!player) return;
-        if (mode === 'practice' && !audioOn) {
-            if (player.mute) player.mute();
-        } else {
-            if (player.unMute) player.unMute();
-        }
-    }
     function setMode(next) {
         mode = next;
         videoWrap.classList.toggle('mini', mode === 'practice');
         noteLane.classList.toggle('hidden', mode !== 'practice');
         modeWatchBtn.classList.toggle('active', mode === 'watch');
         modePracticeBtn.classList.toggle('active', mode === 'practice');
-        audioToggleWrap.classList.toggle('hidden', mode !== 'practice');
         Object.values(keyFillEls).forEach(el => { el.style.opacity = mode === 'practice' ? '1' : '0'; });
         if (mode === 'watch') {
             activeTiles.forEach(tile => tile.remove());
@@ -629,17 +613,10 @@
         } else {
             showPracticeHint();
         }
-        applyAudioState();
         sizeKeys();
     }
     modeWatchBtn.addEventListener('click', () => setMode('watch'));
     modePracticeBtn.addEventListener('click', () => setMode('practice'));
-    audioToggleBtn.addEventListener('click', () => {
-        audioOn = !audioOn;
-        audioToggleBtn.classList.toggle('active', audioOn);
-        audioToggleBtn.textContent = audioOn ? '🔊' : '🔇';
-        applyAudioState();
-    });
 
     // --- "אני רוצה לנסות לבד" — self-paced staff view. Every note in the
     // song is laid out once, left to right in order, at its real pitch
@@ -753,12 +730,11 @@
             playerVars: { playsinline: 1, rel: 0 },
             events: {
                 onReady: () => {
-                    // applyAudioState() may have already run once, before
-                    // the player existed (e.g. songs that call
-                    // setMode('practice') immediately on load) — it was a
-                    // no-op then, so re-apply now that mute()/unMute() are
-                    // actually callable.
-                    applyAudioState();
+                    // This lesson's video is Hani's own playing, not singing —
+                    // audible at the same time as the child's own piano it just
+                    // reads as confusing noise, so it stays muted permanently
+                    // (no toggle, nothing to opt into).
+                    player.mute();
                     if (pendingPlay) player.playVideo();
                 },
                 onStateChange: (e) => {
