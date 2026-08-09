@@ -66,50 +66,6 @@
         }
         .mode-btn.active { background: var(--teal); color: #0a1210; border-color: var(--teal); font-weight: bold; }
 
-        /* Practice-only: toggles whether the video's own audio (the song +
-           Hani singing along) is heard while the child plays, independent
-           of the piano's own sound. Off by default — a deliberate choice
-           the child/parent opts into, not something playing unasked.
-           Hidden outside practice mode. */
-        #audio-toggle-wrap {
-            touch-action: auto;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-        }
-        #audio-toggle-wrap.hidden { display: none; }
-        #audio-toggle {
-            touch-action: auto;
-            width: 40px; height: 40px;
-            flex: 0 0 auto;
-            border-radius: 50%;
-            border: 1px solid rgba(255,255,255,0.12);
-            background: #262626;
-            color: rgba(255,255,255,0.35);
-            font-size: 17px;
-            cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-        }
-        #audio-toggle.active {
-            background: radial-gradient(circle at 35% 30%, #4fa3ff, #1a5fc4 75%);
-            border-color: #7ec4ff;
-            color: #fff;
-            box-shadow: 0 0 8px 2px rgba(79,163,255,0.75);
-        }
-        #audio-toggle-label {
-            touch-action: auto;
-            border: 1px solid rgba(255,255,255,0.12);
-            border-radius: 20px;
-            padding: 9px 20px;
-            font-size: 15px;
-            font-family: Arial, sans-serif;
-            background: #262626;
-            color: rgba(255,255,255,0.6);
-            cursor: pointer;
-            white-space: nowrap;
-        }
-
         #speed-bar {
             flex: 0 0 auto;
             display: flex;
@@ -531,10 +487,6 @@
              (not removed from the DOM, so the shared JS logic stays intact). -->
         <button id="mode-watch" class="mode-btn active" style="display:none">👀 צפייה</button>
         <button id="mode-practice" class="mode-btn" style="display:none">🎹 תרגול</button>
-        <div id="audio-toggle-wrap" class="hidden">
-            <button id="audio-toggle" title="ליווי קול">🔇</button>
-            <span id="audio-toggle-label">חני, תנגני איתי</span>
-        </div>
         <button id="solo-btn">אני רוצה לנסות לבד</button>
     </div>
     <div id="speed-bar">
