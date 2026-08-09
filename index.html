@@ -34,7 +34,12 @@
            disappearing outright — the song keeps playing (timing + audio
            reference), but it stops competing visually with the falling
            notes for the child's attention. */
-        #video-wrap.mini { flex: 0 0 76px; }
+        /* This lesson has no watch mode — mode is locked to 'practice' on
+           load (see setMode('practice') below) — so the video never needs
+           to be seen at all. It's kept in the DOM at a hair's-breadth size
+           (not display:none) purely so iOS doesn't suspend its audio, since
+           that audio is still the practice timing/reference track. */
+        #video-wrap.mini { flex: 0 0 2px; opacity: 0; }
         #video-wrap.mini iframe { pointer-events: none; }
 
         #mode-bar {
@@ -1411,9 +1416,10 @@
         let laneH = 0;
         let availableH, maxKeyH;
         if (mode === 'practice') {
-            // Video is a fixed 76px strip in practice mode (see #video-wrap.mini),
-            // not a flex share — so it's chrome here, not part of the split.
-            availableH = Math.max(320, window.innerHeight - chromeH - 76);
+            // This lesson has no visible video (see #video-wrap.mini above) —
+            // just a 2px sliver kept alive for its audio — so almost none of
+            // the window height needs to be reserved for it.
+            availableH = Math.max(320, window.innerHeight - chromeH - 2);
             laneH = Math.max(80, Math.min(150, Math.round(whiteW * 2.1)));
             maxKeyH = Math.max(160, availableH - laneH);
         } else {
