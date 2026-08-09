@@ -164,7 +164,7 @@
            cabinet truly centered on the page regardless of content width. */
         #rig {
             display: grid;
-            grid-template-columns: 96px auto 96px;
+            grid-template-columns: auto;
             align-items: end;
             justify-content: center;
             gap: 16px;
@@ -540,7 +540,6 @@
     </div>
     <div id="piano-container">
         <div id="rig">
-            <div></div>
             <div id="cabinet">
                 <div id="cabinet-lip"></div>
                 <div id="keywell">
@@ -550,7 +549,6 @@
                     <div class="piano" id="piano"></div>
                 </div>
             </div>
-            <div></div>
         </div>
     </div>
 </div>
@@ -680,6 +678,7 @@
             }
             const note = document.createElement('div');
             note.className = 'staff-note';
+            if (i < soloIdx) note.classList.add('done');
             note.style.left = x + 'px';
             note.style.top = y + 'px';
             note.style.width = noteSize + 'px';
@@ -724,6 +723,8 @@
             // into a fresh "לנסות לבד" attempt.
             Object.values(keyByNote).forEach(el => el.classList.remove('due'));
             resetKeyFills();
+            activeTiles.forEach(tile => tile.remove());
+            activeTiles.clear();
         } else {
             staffWrap.classList.remove('active');
             noteLane.classList.remove('hidden'); // this lesson is always in practice mode
@@ -1316,7 +1317,7 @@
     const activeTiles = new Map(); // songNotes index -> tile element
 
     function renderFallingLane(t) {
-        if (mode !== 'practice') return;
+        if (mode !== 'practice' || soloMode) return;
         const laneH = noteLane.clientHeight;
         if (!laneH) return;
         // Lands so the tile's own bottom edge meets the hit-line, not its top.
@@ -1390,9 +1391,7 @@
     // the video out on a short window.
     function sizeKeys() {
         const totalWhiteKeys = 7;
-        // Two 96px mirror columns (empty, just to keep the cabinet
-        // centered) + grid gaps + cabinet/keywell padding.
-        const reserved = 96 * 2 + 16 * 2 + 40;
+        const reserved = 40;
         const rawWidth = Math.min(pianoContainer.clientWidth, window.innerWidth);
         const containerWidth = Math.max(220, rawWidth - reserved);
 
@@ -1439,7 +1438,7 @@
         document.documentElement.style.setProperty('--lane-h', laneH + 'px');
         document.documentElement.style.setProperty('--staff-h', laneH + 'px');
     }
-    window.addEventListener('resize', sizeKeys);
+    window.addEventListener('resize', () => { sizeKeys(); if (soloMode) buildStaff(); });
     sizeKeys();
     // Re-measure once layout has fully settled — an initial synchronous call
     // can occasionally read a stale/incorrect container width before the
