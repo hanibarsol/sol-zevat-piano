@@ -63,24 +63,25 @@
         #home-btn-circle img { width: 100%; height: 100%; object-fit: contain; display: block; }
         #home-btn-label {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 4px;
             background: rgba(0,0,0,0.6);
             border-radius: 10px;
-            padding: 3px 7px;
+            padding: 3px 8px;
             font-size: 12px;
-            line-height: 1.25;
+            line-height: 1.35;
             color: #fff;
             text-align: center;
-            max-width: 82px;
+            white-space: nowrap;
             font-family: Arial, sans-serif;
         }
+        #home-btn-line2 { display: flex; align-items: center; gap: 3px; }
         #home-btn-label svg { flex: 0 0 auto; width: 12px; height: 12px; }
 
         @media (max-width: 640px) {
             #home-btn { top: 6px; right: 6px; gap: 3px; transform: none; }
             #home-btn-circle { width: 46px; height: 46px; border-width: 2px; }
-            #home-btn-label { font-size: 9px; max-width: 60px; padding: 2px 5px; }
+            #home-btn-label { font-size: 9px; padding: 2px 5px; }
             #home-btn-label svg { width: 9px; height: 9px; }
         }
 
@@ -595,12 +596,15 @@
 <a id="home-btn" href="https://portal.smoove.io/gsbmtbnbbf1yd87kbofd1/Category?category=qqb">
     <div id="home-btn-circle"><img src="סול.png" alt="סול"></div>
     <div id="home-btn-label">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 11L12 4L21 11" stroke="#6fd6c9" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M5 9.5V20H19V9.5" stroke="#6fd6c9" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M10 20V14H14V20" stroke="#6fd6c9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <span>חזרה לעולמות של סול</span>
+        <span>חזרה לעולמות</span>
+        <span id="home-btn-line2">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 11L12 4L21 11" stroke="#6fd6c9" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M5 9.5V20H19V9.5" stroke="#6fd6c9" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M10 20V14H14V20" stroke="#6fd6c9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>של סול</span>
+        </span>
     </div>
 </a>
 
