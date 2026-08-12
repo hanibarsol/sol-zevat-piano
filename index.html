@@ -26,7 +26,12 @@
         }
         #app { display: flex; flex-direction: column; width: 100%; height: 100%; }
 
-        #start-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.85); color: white; display: flex; justify-content: center; align-items: center; z-index: 100; cursor: pointer; font-size: 22px; text-align: center; padding: 20px; box-sizing: border-box; }
+        /* Invisible full-screen tap catcher, not a visible "click to start"
+           prompt — browsers (iOS Safari especially) still require a real
+           user gesture before audio can play at all, so this stays in the
+           DOM to guarantee that first tap is captured, it just no longer
+           looks like a separate screen the child has to get past. */
+        #start-screen { position: fixed; inset: 0; background: transparent; z-index: 100; cursor: pointer; }
 
         #video-wrap { flex: 1 1 auto; min-height: 0; background: #000; touch-action: auto; transition: flex-basis 0.25s ease; }
         #video-wrap iframe { width: 100%; height: 100%; border: 0; touch-action: auto; }
@@ -498,75 +503,6 @@
     </style>
 </head>
 <body>
-<style>
-  .btn-info {
-    position: fixed; top: 42px; left: 16px; z-index: 999;
-    display: inline-flex; align-items: center; gap: 5px; font-family: inherit; font-weight: 800; font-size: 12.5px;
-    text-decoration: none; border-radius: 999px; padding: 7px 13px; cursor: pointer;
-    background: #1BE7C9; border: none; color: #000;
-    box-shadow: 0 0 12px 2px rgba(27,231,201,.65), 0 4px 12px rgba(27,231,201,.35);
-    animation: infoPulse 2.2s ease-in-out infinite;
-    transition: transform .1s ease;
-  }
-  .btn-info .btn-info-icon { font-size: 14px; }
-  @keyframes infoPulse {
-    0%, 100% { box-shadow: 0 0 12px 2px rgba(27,231,201,.65), 0 4px 12px rgba(27,231,201,.35); }
-    50% { box-shadow: 0 0 18px 5px rgba(27,231,201,.85), 0 4px 12px rgba(27,231,201,.35); }
-  }
-  .btn-info:hover { transform: scale(1.05); }
-  .btn-info:active { transform: scale(.96); }
-  .btn-info:focus-visible { outline: 3px solid #14766A; outline-offset: 2px; }
-  @media (prefers-reduced-motion: reduce) { .btn-info { animation: none; } }
-  .video-modal-backdrop {
-    position: fixed; inset: 0; background: rgba(15,12,25,.8); z-index: 1000;
-    display: flex; align-items: center; justify-content: center; padding: 16px;
-  }
-  .video-modal-backdrop.hidden { display: none; }
-  .video-modal-box {
-    position: relative; width: 100%; max-width: 720px; background: #000;
-    border-radius: 18px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.5);
-  }
-  .video-modal-box video { display: block; width: 100%; max-height: 80vh; background: #000; }
-  .video-modal-close {
-    position: absolute; top: 10px; left: 10px; width: 38px; height: 38px; border-radius: 50%;
-    border: none; background: rgba(255,255,255,.92); color: #241F3D; font-size: 18px; font-weight: 800;
-    cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 2;
-  }
-  .video-modal-close:active { transform: scale(.94); }
-  @media (max-width: 480px) { .video-modal-box { max-width: 100%; } }
-</style>
-<button class="btn-info" id="btnInfo" type="button" title="סרטון הדרכה קצר"><span class="btn-info-icon">ℹ️</span> Info</button>
-<div class="video-modal-backdrop hidden" id="videoModalBackdrop">
-  <div class="video-modal-box">
-    <button class="video-modal-close" id="videoModalClose" type="button" title="סגירה">✕</button>
-    <video id="introVideo" controls playsinline preload="none">
-      <source src="media/info-video.mp4" type="video/mp4">
-    </video>
-  </div>
-</div>
-<script>
-(function () {
-  "use strict";
-  const btnInfo = document.getElementById("btnInfo");
-  const backdrop = document.getElementById("videoModalBackdrop");
-  const closeBtn = document.getElementById("videoModalClose");
-  const video = document.getElementById("introVideo");
-  if (!btnInfo || !backdrop || !closeBtn || !video) return;
-  function openVideoModal() {
-    backdrop.classList.remove("hidden");
-    video.currentTime = 0;
-    video.play().catch(() => {});
-  }
-  function closeVideoModal() {
-    video.pause();
-    backdrop.classList.add("hidden");
-  }
-  btnInfo.addEventListener("click", openVideoModal);
-  closeBtn.addEventListener("click", closeVideoModal);
-  backdrop.addEventListener("click", (e) => { if (e.target === backdrop) closeVideoModal(); });
-})();
-</script>
-
 
 <div id="app">
     <div id="video-wrap">
@@ -603,7 +539,7 @@
     </div>
 </div>
 
-<div id="start-screen">לחצי כאן כדי להתחיל את השיעור והפסנתר</div>
+<div id="start-screen"></div>
 
 <div id="calib-panel">
     <button id="calib-mark">סמן עכשיו ▶</button>
