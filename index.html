@@ -79,7 +79,10 @@
         #home-btn-label svg { flex: 0 0 auto; width: 12px; height: 12px; }
 
         @media (max-width: 640px) {
-            #home-btn { top: 6px; right: 6px; gap: 3px; transform: none; }
+            /* Below the mode-bar row (not overlapping it) — on this lesson
+               the row's own buttons can render wide enough on a real phone
+               to reach the same corner the button used to float in. */
+            #home-btn { top: 64px; right: 6px; gap: 3px; transform: none; }
             #home-btn-circle { width: 46px; height: 46px; border-width: 2px; }
             #home-btn-label { font-size: 9px; padding: 2px 5px; }
             #home-btn-label svg { width: 9px; height: 9px; }
