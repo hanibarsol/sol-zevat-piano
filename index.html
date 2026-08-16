@@ -556,37 +556,6 @@
             padding: 4px;
         }
     </style>
-<style>
-/* ---------- Sol home button (unified turquoise) ---------- */
-.sol-home-btn {
-    position: fixed;
-    top: 12px;
-    left: 12px;
-    z-index: 101;
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    background: #17A79B;
-    color: #FFFFFF;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    box-shadow: 0 4px 14px rgba(18, 48, 44, 0.35);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-.sol-home-btn:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 8px 18px rgba(18, 48, 44, 0.45); }
-.sol-home-btn:focus-visible { outline: 3px solid #FFFFFF; outline-offset: 3px; }
-.sol-home-btn svg { width: 26px; height: 26px; }
-@media (max-width: 640px) {
-    .sol-home-btn { width: 44px; height: 44px; top: 8px; left: 8px; }
-    .sol-home-btn svg { width: 22px; height: 22px; }
-}
-@media (prefers-reduced-motion: reduce) {
-    .sol-home-btn { transition: none; }
-    .sol-home-btn:hover { transform: none; }
-}
-</style>
 </head>
 <body>
 
@@ -627,11 +596,19 @@
 
 <div id="start-screen"></div>
 
-<a class="sol-home-btn" href="https://portal.smoove.io/gsbmtbnbbf1yd87kbofd1/Category?category=qqb" target="_top" aria-label="חזרה למסך הבית">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M3 11l9-8 9 8" />
-        <path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10" />
-    </svg>
+<a id="home-btn" href="https://portal.smoove.io/gsbmtbnbbf1yd87kbofd1/Category?category=qqb">
+    <div id="home-btn-circle"><img src="סול.png" alt="סול"></div>
+    <div id="home-btn-label">
+        <span>חזרה לעולמות</span>
+        <span id="home-btn-line2">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 11L12 4L21 11" stroke="#6fd6c9" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M5 9.5V20H19V9.5" stroke="#6fd6c9" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M10 20V14H14V20" stroke="#6fd6c9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>של סול</span>
+        </span>
+    </div>
 </a>
 
 <div id="calib-panel">
@@ -709,15 +686,23 @@
         staffInner.innerHTML = '';
         staffNoteEls.length = 0;
         const wrapH = staffWrap.clientHeight || 150;
-        const offsetY = Math.max(10, (wrapH - 60) / 2);
+        const whiteWpx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--white-w')) || 50;
+        // Note circles are normally sized off key width, but on a wide
+        // landscape screen that can come out bigger than the wrap is tall —
+        // cap them to what actually fits, so they never overlap/clip
+        // instead of just reading the notation smaller.
+        const idealNoteSize = whiteWpx * 0.5;
+        const maxNoteSizeForHeight = Math.max(16, (wrapH - 16) / 3);
+        const noteSize = Math.min(idealNoteSize, maxNoteSizeForHeight);
+        // The 5 staff lines + ledger span 36px (STAFF_PITCH_Y's own range),
+        // plus each note's own radius poking past the top/bottom line.
+        const offsetY = Math.max(10, (wrapH - (36 + noteSize)) / 2);
         [0, 12, 24, 36, 48].forEach(y => {
             const line = document.createElement('div');
             line.className = 'staff-line';
             line.style.top = (y + offsetY) + 'px';
             staffInner.appendChild(line);
         });
-        const whiteWpx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--white-w')) || 50;
-        const noteSize = whiteWpx * 0.5;
         const spacing = noteSize * 1.35;
         staffInner.style.width = (songNotes.length * spacing + 40) + 'px';
         songNotes.forEach((n, i) => {
@@ -1505,11 +1490,12 @@
             availableH = Math.max(160, window.innerHeight - chromeH - 2);
             // Keys get first claim on the space and a real floor — a small
             // phone in landscape is exactly when keys most need to stay
-            // tappable, so the lane (just for reading notes, not playing)
-            // is what shrinks first, not the keyboard itself.
-            maxKeyH = Math.max(140, Math.min(220, availableH - 30));
-            const idealLaneH = Math.max(30, Math.min(150, Math.round(whiteW * 2.1)));
-            laneH = Math.max(30, Math.min(idealLaneH, availableH - maxKeyH));
+            // tappable — but the lane still needs enough room that its own
+            // note circles (sized off key width, which stays generous on a
+            // wide landscape screen) don't get clipped inside it.
+            maxKeyH = Math.max(125, Math.min(220, availableH - 55));
+            const idealLaneH = Math.max(55, Math.min(150, Math.round(whiteW * 2.1)));
+            laneH = Math.max(55, Math.min(idealLaneH, availableH - maxKeyH));
         } else {
             availableH = Math.max(320, window.innerHeight - chromeH);
             // Standing rule across every song page: video gets ~45% of the
