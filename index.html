@@ -1480,13 +1480,13 @@
             // exists, pushing the piano/staff below the visible viewport
             // instead of shrinking to fit it.
             availableH = Math.max(160, window.innerHeight - chromeH - 2);
-            const idealLaneH = Math.max(60, Math.min(150, Math.round(whiteW * 2.1)));
-            // The lane/staff is capped at a share of the real available
-            // height too, not just sized off width — otherwise it alone
-            // could claim most of a short landscape budget, leaving the
-            // keys with nothing.
-            laneH = Math.min(idealLaneH, Math.max(40, Math.round(availableH * 0.45)));
-            maxKeyH = Math.max(90, availableH - laneH);
+            // Keys get first claim on the space and a real floor — a small
+            // phone in landscape is exactly when keys most need to stay
+            // tappable, so the lane (just for reading notes, not playing)
+            // is what shrinks first, not the keyboard itself.
+            maxKeyH = Math.max(140, Math.min(220, availableH - 30));
+            const idealLaneH = Math.max(30, Math.min(150, Math.round(whiteW * 2.1)));
+            laneH = Math.max(30, Math.min(idealLaneH, availableH - maxKeyH));
         } else {
             availableH = Math.max(320, window.innerHeight - chromeH);
             // Standing rule across every song page: video gets ~45% of the
