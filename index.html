@@ -1475,9 +1475,18 @@
             // This lesson has no visible video (see #video-wrap.mini above) —
             // just a 2px sliver kept alive for its audio — so almost none of
             // the window height needs to be reserved for it.
-            availableH = Math.max(320, window.innerHeight - chromeH - 2);
-            laneH = Math.max(80, Math.min(150, Math.round(whiteW * 2.1)));
-            maxKeyH = Math.max(160, availableH - laneH);
+            // No 320px floor here on purpose — on a short landscape phone
+            // screen that floor used to claim more height than actually
+            // exists, pushing the piano/staff below the visible viewport
+            // instead of shrinking to fit it.
+            availableH = Math.max(160, window.innerHeight - chromeH - 2);
+            const idealLaneH = Math.max(60, Math.min(150, Math.round(whiteW * 2.1)));
+            // The lane/staff is capped at a share of the real available
+            // height too, not just sized off width — otherwise it alone
+            // could claim most of a short landscape budget, leaving the
+            // keys with nothing.
+            laneH = Math.min(idealLaneH, Math.max(40, Math.round(availableH * 0.45)));
+            maxKeyH = Math.max(90, availableH - laneH);
         } else {
             availableH = Math.max(320, window.innerHeight - chromeH);
             // Standing rule across every song page: video gets ~45% of the
