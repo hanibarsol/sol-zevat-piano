@@ -1505,15 +1505,33 @@
 
             let isTouchActive = false;
 
-            key.addEventListener('pointerdown', () => {
-                if (isTouchActive) return;
+            // אצבע שנחה על הקליד מדריכה מחוות מערכת של iOS שמגדילה את
+            // המסך, וזה קורה בכל פעם שמחזיקים תו ארוך. שום חסימה בצד
+            // הדפדפן לא עוצרת אותה - נוסו שמונה שונות. מה שכן עוצר:
+            // לתפוס את אירוע המגע ולבטל את ברירת המחדל שלו, כלומר להגיד
+            // למערכת שהמגע כבר טופל. נמדד במכשיר: scale נשאר 1.00.
+            // אירועי מגע ולא pointer, כי רק להם יש ברירת מחדל לבטל.
+            key.addEventListener('touchstart', (e) => {
+                if (e.cancelable) e.preventDefault();
                 isTouchActive = true;
+                playNote();
+            }, { passive: false });
+            const touchEnd = (e) => {
+                if (e.cancelable) e.preventDefault();
+                stopNote();
+            };
+            key.addEventListener('touchend', touchEnd, { passive: false });
+            key.addEventListener('touchcancel', touchEnd, { passive: false });
+
+            // עכבר במחשב. במגע האירועים האלה עלולים לרוץ גם הם, והשומרים
+            // שבתוך playNote ו-stopNote מונעים הפעלה כפולה.
+            key.addEventListener('pointerdown', (e) => {
+                if (e.pointerType === 'touch') return;
                 playNote();
             });
             key.addEventListener('pointermove', (e) => e.preventDefault());
-            key.addEventListener('pointerup', () => { isTouchActive = false; stopNote(); });
-            key.addEventListener('pointerleave', () => { isTouchActive = false; stopNote(); });
-            key.addEventListener('pointercancel', () => { isTouchActive = false; stopNote(); });
+            ['pointerup', 'pointerleave', 'pointercancel'].forEach(t =>
+                key.addEventListener(t, (e) => { if (e.pointerType === 'touch') return; stopNote(); }));
 
             pianoElement.appendChild(key);
         });
