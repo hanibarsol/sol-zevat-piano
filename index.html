@@ -526,6 +526,26 @@
             border: 1px solid #4caf50;
             padding: 4px;
         }
+        /* ============ משכי תווים ב"אני רוצה לנסות לבד" ============
+           תו ארוך נדרש להחזקה במקום לנגיעה: העיגול מתמלא מים כל עוד
+           האצבע למטה, וצלצול מסמן שהוא מלא. שחרור מוקדם אינו טעות -
+           המים נשפכים חזרה וזו הזדמנות לנסות שוב. */
+        .staff-note-avatar { position: relative; }
+        .note-water { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+        .note-water svg { width: 100%; height: 100%; display: block; }
+        /* בזמן החזקה טבעת זהב, וכשמלא טבעת טורקיז. שום דבר לא גדל ולא זז:
+           האצבע על הקליד, ותנועה על המסך באמצע החזקה מבלבלת. */
+        .staff-note.holding .staff-note-avatar {
+            border-color: #e0a83f;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.5), 0 0 0 4px rgba(255,214,102,0.5);
+        }
+        .staff-note.hold-full .staff-note-avatar {
+            box-shadow: 0 0 0 7px rgba(111,214,201,0.45), 0 0 14px 4px rgba(111,214,201,0.9);
+        }
+        /* אצבע שנחה שנייה שלמה על תמונת הדמות גורמת ל-iOS לנסות לגרור
+           אותה. עד עכשיו לא היו כאן החזקות, ולכן זה לא צץ. */
+        .key img, .staff-note img { -webkit-user-drag: none; user-drag: none; }
+        /* ================= סוף התוספת ================= */
     </style>
 <style>
 /* ---------- Sol home button (unified turquoise) ---------- */
@@ -580,7 +600,7 @@
         <button id="solo-btn">אני רוצה לנסות לבד</button>
     </div>
     <div id="speed-bar">
-        <button id="play-pause" class="speed-step-btn">⏸</button>
+        <button id="play-pause" class="speed-step-btn">▶</button>
         <button id="speed-minus" class="speed-step-btn">－</button>
         <button id="speed-reset" class="is-normal">מהירות</button>
         <button id="speed-plus" class="speed-step-btn">＋</button>
@@ -678,11 +698,13 @@
     const staffWrap = document.getElementById('staff-wrap');
     const staffInner = document.getElementById('staff-inner');
     const staffNoteEls = [];
+    const staffWaterEls = [];
     const STAFF_PITCH_Y = { C: 60, D: 54, E: 48, F: 42, G: 36, A: 30, B: 24 };
 
     function buildStaff() {
         staffInner.innerHTML = '';
         staffNoteEls.length = 0;
+        staffWaterEls.length = 0;
         const wrapH = staffWrap.clientHeight || 150;
         const whiteWpx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--white-w')) || 50;
         // Note circles are normally sized off key width, but on a wide
@@ -726,13 +748,129 @@
             avatar.className = 'staff-note-avatar';
             const img = document.createElement('img');
             img.src = characterImages[noteLetterOrder.indexOf(letter)] || '';
+            img.draggable = false;
             avatar.appendChild(img);
+            // המים יושבים מעל הדמות בשקיפות: מתחתיה הם היו נעלמים,
+            // כי לרקע של התמונות אין שקיפות.
+            const water = document.createElement('div');
+            water.className = 'note-water';
+            water.innerHTML = waterSvg('0.72');
+            avatar.appendChild(water);
+            staffWaterEls.push(water);
             note.appendChild(avatar);
             staffInner.appendChild(note);
             staffNoteEls.push(note);
         });
         updateStaffScroll();
     }
+
+    // ===================== משכי תווים =====================
+    const WAVE_TOP  = "M-100,0 q25,-6 50,0 t50,0 t50,0 t50,0 t50,0 t50,0";
+    const WAVE_PATH = WAVE_TOP + " V115 H-100 Z";
+    function waterSvg(opacity) {
+        return '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' +
+            '<path class="wv" fill="#0F8C82" fill-opacity="' + opacity + '" d="' + WAVE_PATH + '" transform="translate(0,100)"></path>' +
+            '<path class="wv" fill="none" stroke="#BFF6EE" stroke-width="6" stroke-opacity="0.95" d="' + WAVE_TOP + '" transform="translate(0,100)"></path>' +
+            '</svg>';
+    }
+    function setWater(el, p) {
+        if (!el) return;
+        // הגל מתנדנד קלות בזמן שהוא עולה, כדי שייראה כמו מים ולא כמו פס
+        const t = 'translate(' + (Math.sin(Date.now() / 240) * 6) + ',' + ((1 - p) * 100) + ')';
+        el.querySelectorAll('.wv').forEach(wv => wv.setAttribute('transform', t));
+    }
+    function paintNoteFill(idx, p) { setWater(staffWaterEls[idx], p); }
+
+    let soloHold = null;
+    let drainSeq = 0;
+    let chimeSynth = null;
+
+    function holdChime() {
+        try {
+            if (!chimeSynth) {
+                chimeSynth = new Tone.Synth({
+                    oscillator: { type: 'sine' },
+                    envelope: { attack: 0.005, decay: 0.4, sustain: 0, release: 0.1 }
+                }).toDestination();
+                chimeSynth.volume.value = -14;
+            }
+            chimeSynth.triggerAttackRelease('C7', 0.25);
+        } catch (err) {}
+    }
+
+    function completeSoloNote(idx, key) {
+        fillKey(songNotes[idx].note);
+        key.classList.add('correct-flash');
+        const star = document.createElement('div');
+        star.className = 'star-pop';
+        star.textContent = '⭐';
+        key.appendChild(star);
+        setTimeout(() => {
+            key.classList.remove('correct-flash');
+            star.remove();
+        }, 550);
+        paintNoteFill(idx, 1);
+        markStaffNoteDone(idx);
+        soloIdx++;
+        updateStaffScroll();
+    }
+
+    function startHold(idx, key) {
+        if (soloHold) return;
+        drainSeq++;
+        soloHold = { idx: idx, key: key, full: false, t0: Date.now(), need: songNotes[idx].dur * 1000 };
+        const el = staffNoteEls[idx];
+        if (el) el.classList.add('holding');
+        holdTick();
+    }
+
+    function holdTick() {
+        if (!soloHold) return;
+        const p = Math.min(1, (Date.now() - soloHold.t0) / soloHold.need);
+        paintNoteFill(soloHold.idx, p);
+        if (p >= 1 && !soloHold.full) {
+            soloHold.full = true;
+            const el = staffNoteEls[soloHold.idx];
+            if (el) el.classList.add('hold-full');
+            holdChime();
+        }
+        soloHold.raf = requestAnimationFrame(holdTick);
+    }
+
+    function releaseHold(key) {
+        if (!soloHold || soloHold.key !== key) return;
+        const h = soloHold;
+        soloHold = null;
+        cancelAnimationFrame(h.raf);
+        const el = staffNoteEls[h.idx];
+        if (el) el.classList.remove('holding', 'hold-full');
+        const p = Math.min(1, (Date.now() - h.t0) / h.need);
+        if (p >= HOLD_TOL) completeSoloNote(h.idx, h.key);
+        else drainNote(h.idx, p);
+    }
+
+    // שחרור מוקדם אינו טעות - המים נשפכים החוצה ומנסים שוב.
+    function drainNote(idx, from) {
+        const t0 = Date.now();
+        const mine = ++drainSeq;
+        (function step() {
+            if (mine !== drainSeq) return;
+            const q = Math.min(1, (Date.now() - t0) / 280);
+            paintNoteFill(idx, from * (1 - q));
+            if (q < 1) requestAnimationFrame(step);
+        })();
+    }
+
+    function cancelHold() {
+        if (!soloHold) return;
+        const h = soloHold;
+        soloHold = null;
+        cancelAnimationFrame(h.raf);
+        const el = staffNoteEls[h.idx];
+        if (el) el.classList.remove('holding', 'hold-full');
+        paintNoteFill(h.idx, 0);
+    }
+    // =================== סוף התוספת ===================
 
     function markStaffNoteDone(index) {
         const el = staffNoteEls[index];
@@ -745,6 +883,7 @@
     }
 
     soloBtn.addEventListener('click', () => {
+        cancelHold();
         soloMode = !soloMode;
         soloBtn.classList.toggle('active', soloMode);
         soloBtn.textContent = soloMode ? 'חזרה לתרגול הרגיל' : 'אני רוצה לנסות לבד';
@@ -815,6 +954,10 @@
 
         if (player && player.playVideo) player.playVideo();
         else pendingPlay = true;
+        // עד הנגיעה הזו שום דבר לא התנגן, ולכן הכפתור פתח ב-▶.
+        // רק כאן הוא הופך לכפתור עצירה אמיתי.
+        playPauseBtn.textContent = '⏸';
+        isPaused = false;
     });
 
     // Speed stepper: minus/plus move in 0.25 steps between 0.5x-1.5x,
@@ -938,6 +1081,20 @@
     const songTimes = [3.94, 5.32, 6.04, 6.82, 7.86, 8.65, 11.07, 11.89, 12.66, 13.56, 15.73, 17.08, 17.87, 18.61, 19.65, 20.46, 22.87, 23.72, 24.48, 25.43, 27.80, 29.02, 30.06, 31.04, 31.98, 33.01, 34.79, 35.67, 36.55, 37.68, 39.68, 40.95, 41.93, 42.91, 43.82, 44.88, 46.69, 47.64, 48.43, 49.51];
     const songLetters = ['D', 'D', 'C', 'C', 'D', 'D', 'D', 'E', 'C', 'D', 'D', 'D', 'C', 'C', 'D', 'D', 'D', 'E', 'C', 'D', 'G', 'A', 'F', 'F', 'F', 'F', 'F', 'G', 'E', 'F', 'G', 'A', 'F', 'F', 'F', 'F', 'F', 'G', 'E', 'D'];
     const songNotes = songTimes.map((t, i) => ({ time: t, note: songLetters[i] + '4' }));
+
+    // --- אורך התו ---
+    // הנתונים למעלה הם רגעי כניסה בלבד, בלי אורך. האורך נגזר מהמרווח עד
+    // התו הבא. המספרים כאן חושבו מפיזור המרווחים של השיר הזה בלבד -
+    // לכל שיר קצב אחר, והעתקה מאחר תיתן סיווג שגוי.
+    const HOLD_MIN = 1.5;   // מתחת לזה נגיעה. מעל - החזקה.
+    const DUR_CAP  = 1.9;   // תקרה: מרווח ארוך הוא תו ועוד שתיקה
+    const LAST_DUR = 1.9;   // לתו האחרון אין מרווח אחריו
+    const HOLD_TOL = 0.90;  // 90% מהאורך כבר נחשב מלא
+    songNotes.forEach((n, i) => {
+        const gap = i < songNotes.length - 1 ? songNotes[i + 1].time - n.time : LAST_DUR;
+        n.dur = Math.min(gap, DUR_CAP);
+        n.hold = n.dur >= HOLD_MIN;
+    });
 
     // Per-key "fill" progress (idea: each correct-in-time press fills up
     // the key a little, like pouring water into a glass — by the end of
@@ -1293,19 +1450,9 @@
                     // Self-paced: "correct" just means "the right next note
                     // in the sequence," with no clock involved at all.
                     if (soloIdx < songNotes.length && fullNote === songNotes[soloIdx].note) {
-                        fillKey(fullNote);
-                        key.classList.add('correct-flash');
-                        const star = document.createElement('div');
-                        star.className = 'star-pop';
-                        star.textContent = '⭐';
-                        key.appendChild(star);
-                        setTimeout(() => {
-                            key.classList.remove('correct-flash');
-                            star.remove();
-                        }, 550);
-                        markStaffNoteDone(soloIdx);
-                        soloIdx++;
-                        updateStaffScroll();
+                        // עכשיו גם אורך התו נחשב, לא רק איזה תו נלחץ
+                        if (songNotes[soloIdx].hold) startHold(soloIdx, key);
+                        else completeSoloNote(soloIdx, key);
                     }
                 } else if (!songHit && songIdx < songNotes.length && player && player.getCurrentTime) {
                     // Feedback runs in both modes now — Hani's own narration in
@@ -1338,6 +1485,7 @@
                 if (key.dataset.isPlaying === "false") return;
                 key.dataset.isPlaying = "false";
                 key.classList.remove('active');
+                releaseHold(key);
                 if (currentMode === 'piano') {
                     try { sampler.triggerRelease(fullNote); } catch (err) {}
                 } else if (currentMode !== 'drums') {
