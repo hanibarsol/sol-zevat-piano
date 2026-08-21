@@ -267,8 +267,8 @@
             touch-action: auto;
             border: 1px solid rgba(255,255,255,0.12);
             border-radius: 20px;
-            padding: 9px 20px;
-            font-size: 15px;
+            padding: 9px 12px;
+            font-size: 14px;
             font-family: Arial, sans-serif;
             background: #262626;
             color: rgba(255,255,255,0.6);
@@ -287,8 +287,11 @@
             touch-action: auto;
             border: 1px solid rgba(255,255,255,0.18);
             border-radius: 20px;
-            padding: 9px 20px;
-            font-size: 15px;
+            /* מהודק כדי ששני הכפתורים ייכנסו יחד לשורה אחת בטלפון:
+               393 פחות 60 השמורים לכפתור הבית ופחות שוליים = 323,
+               והם דרשו 331. המילים נשארות, רק המסגרת מתהדקת. */
+            padding: 9px 12px;
+            font-size: 14px;
             font-family: Arial, sans-serif;
             background: #262626;
             color: #fff;
@@ -879,7 +882,14 @@
 
     function updateStaffScroll() {
         const cur = staffNoteEls[soloIdx];
-        if (cur) cur.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+        if (!cur) return;
+        // scrollIntoView מוסר לדפדפן אלמנט ומשאיר לו לבחור איך "לחשוף"
+        // אותו. ספארי באייפון בוחר לפעמים להגדיל את העמוד כולו, וזה קורה
+        // מיד אחרי שתו נסגר. גוללים את החמשה בעצמנו: המכל בלבד, לא העמוד.
+        const target = cur.offsetLeft - (staffWrap.clientWidth - cur.offsetWidth) / 2;
+        const left = Math.max(0, Math.min(target, staffInner.offsetWidth - staffWrap.clientWidth));
+        if (staffWrap.scrollTo) staffWrap.scrollTo({ left: left, behavior: 'smooth' });
+        else staffWrap.scrollLeft = left;
     }
 
     soloBtn.addEventListener('click', () => {
