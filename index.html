@@ -548,6 +548,37 @@
         /* אצבע שנחה שנייה שלמה על תמונת הדמות גורמת ל-iOS לנסות לגרור
            אותה. עד עכשיו לא היו כאן החזקות, ולכן זה לא צץ. */
         .key img, .staff-note img { -webkit-user-drag: none; user-drag: none; }
+        /* אפשר לנגן גם מהדמות עצמה, לא רק מהקליד */
+        .staff-note { cursor: pointer; -webkit-touch-callout: none; }
+        .staff-note img { -webkit-touch-callout: none; }
+        .staff-note-avatar { z-index: 1; }
+
+        /* קו המתאר של הדמות נדלק בהדרגה. מסכה חותכת את העיגול לטבעת,
+           כך שהמרכז לא נצבע כלל - בלעדיה נצבע עיגול מלא, ובהתחלה הוא
+           נראה כמו מניפה. הזוהר על העטיפה והצביעה על הילד שבתוכה, כי
+           מסכה וזוהר על אותו רכיב מבטלים זה את זה. */
+        .hold-ring {
+            position: absolute; inset: -5px;
+            border-radius: 50%; z-index: 0; pointer-events: none;
+            filter: drop-shadow(0 0 5px rgba(111,214,201,0.95));
+            opacity: 0; transition: opacity .18s ease;
+        }
+        .hold-ring::before {
+            content: ""; position: absolute; inset: 0; border-radius: 50%;
+            /* הקשת מתחילה 45 מעלות אחרי ראש העיגול. הקטע הראשון קצר מכדי
+               להיקרא כקו מתאר, ובעובי שלושה פיקסלים הוא נראה ככתם שלא
+               מסונכרן עם העיגול שמתחתיו. */
+            background: conic-gradient(
+                transparent 0deg var(--skip, 45deg),
+                var(--teal) var(--skip, 45deg) calc(var(--p, 0) * 360deg),
+                transparent 0deg);
+            -webkit-mask: radial-gradient(closest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px));
+            mask: radial-gradient(closest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px));
+        }
+        /* ההתחלה נמוגה פנימה: השקיפות עולה עם ההתקדמות ומגיעה למלאה
+           בערך ב-15 אחוז, כך שהקשת מופיעה כשכבר יש מה לראות. */
+        .staff-note.holding .hold-ring { opacity: calc(var(--p, 0) * 7); }
+        .staff-note.hold-full .hold-ring { filter: drop-shadow(0 0 9px rgba(111,214,201,1)); }
         /* ================= סוף התוספת ================= */
     </style>
 <style>
@@ -702,55 +733,38 @@
     const staffInner = document.getElementById('staff-inner');
     const staffNoteEls = [];
     const staffWaterEls = [];
-    const STAFF_PITCH_Y = { C: 60, D: 54, E: 48, F: 42, G: 36, A: 30, B: 24 };
+    // אין כאן חמשה ואין גובה שמייצג צליל, וזה מכוון. כשתו חייב לשבת
+    // בגובה שמייצג את הצליל שלו, כל טווח הצלילים אוכל את גובה הרצועה
+    // ולדמות נשאר שליש ממנו - 25 פיקסלים, שילד בן 4 לא רואה ובוודאי
+    // לא מצליח להחזיק. בשורה אחת הדמות מקבלת כמעט את כל הגובה.
+    // הזיהוי כאן הוא לפי הדמות, בדיוק כמו על הקליד.
+    // מצב התרגול הרגיל ממשיך לעבוד על מסלול התווים הנופלים כרגיל.
+    const NOTE_HOLD_D = 84;  // דמות של תו שמחזיקים
+    const NOTE_TAP_D  = 64;  // דמות של תו שנוגעים בו
+    const ringEls = [];
 
     function buildStaff() {
         staffInner.innerHTML = '';
         staffNoteEls.length = 0;
         staffWaterEls.length = 0;
-        const wrapH = staffWrap.clientHeight || 150;
-        const whiteWpx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--white-w')) || 50;
-        // Note circles are normally sized off key width, but on a wide
-        // landscape screen that can come out bigger than the wrap is tall —
-        // cap them to what actually fits, so they never overlap/clip
-        // instead of just reading the notation smaller.
-        const idealNoteSize = whiteWpx * 0.5;
-        const maxNoteSizeForHeight = Math.max(16, (wrapH - 16) / 3);
-        const noteSize = Math.min(idealNoteSize, maxNoteSizeForHeight);
-        // The 5 staff lines + ledger span 36px (STAFF_PITCH_Y's own range),
-        // plus each note's own radius poking past the top/bottom line.
-        const offsetY = Math.max(10, (wrapH - (36 + noteSize)) / 2);
-        [0, 12, 24, 36, 48].forEach(y => {
-            const line = document.createElement('div');
-            line.className = 'staff-line';
-            line.style.top = (y + offsetY) + 'px';
-            staffInner.appendChild(line);
-        });
-        const spacing = noteSize * 1.35;
-        staffInner.style.width = (songNotes.length * spacing + 40) + 'px';
+        ringEls.length = 0;
+        const wrapH = staffWrap.clientHeight || 116;
+        const scale = Math.min(1, (wrapH - 16) / NOTE_HOLD_D);
+        const spacing = NOTE_HOLD_D * scale * 1.28;
+        staffInner.style.width = (songNotes.length * spacing + spacing) + 'px';
         songNotes.forEach((n, i) => {
-            const letter = n.note[0];
-            const y = STAFF_PITCH_Y[letter] + offsetY;
-            const x = 30 + i * spacing;
-            if (letter === 'C') {
-                const ledger = document.createElement('div');
-                ledger.className = 'staff-ledger';
-                ledger.style.left = x + 'px';
-                ledger.style.top = y + 'px';
-                ledger.style.width = (noteSize * 1.3) + 'px';
-                staffInner.appendChild(ledger);
-            }
+            const d = Math.round((n.hold ? NOTE_HOLD_D : NOTE_TAP_D) * scale);
             const note = document.createElement('div');
             note.className = 'staff-note';
             if (i < soloIdx) note.classList.add('done');
-            note.style.left = x + 'px';
-            note.style.top = y + 'px';
-            note.style.width = noteSize + 'px';
-            note.style.height = noteSize + 'px';
+            note.style.left = (spacing * 0.6 + i * spacing) + 'px';
+            note.style.top = (wrapH / 2) + 'px';
+            note.style.width = d + 'px';
+            note.style.height = d + 'px';
             const avatar = document.createElement('div');
             avatar.className = 'staff-note-avatar';
             const img = document.createElement('img');
-            img.src = characterImages[noteLetterOrder.indexOf(letter)] || '';
+            img.src = characterImages[noteLetterOrder.indexOf(n.note[0])] || '';
             img.draggable = false;
             avatar.appendChild(img);
             // המים יושבים מעל הדמות בשקיפות: מתחתיה הם היו נעלמים,
@@ -761,10 +775,53 @@
             avatar.appendChild(water);
             staffWaterEls.push(water);
             note.appendChild(avatar);
+            const ring = document.createElement('div');
+            ring.className = 'hold-ring';
+            note.appendChild(ring);
+            ringEls.push(ring);
+
+            // מסלול שני: מחזיקים ישירות על הדמות. אירועי מגע עם ביטול
+            // ברירת המחדל, בדיוק כמו בקליד - זה מה שמונע את ההגדלה.
+            note.addEventListener('touchstart', (e) => {
+                if (e.cancelable) e.preventDefault();
+                circleDown(i, note);
+            }, { passive: false });
+            const cUp = (e) => { if (e.cancelable) e.preventDefault(); circleUp(i, note); };
+            note.addEventListener('touchend', cUp, { passive: false });
+            note.addEventListener('touchcancel', cUp, { passive: false });
+            note.addEventListener('pointerdown', (e) => {
+                if (e.pointerType === 'touch') return;
+                e.preventDefault(); circleDown(i, note);
+            });
+            ['pointerup', 'pointerleave', 'pointercancel'].forEach(t =>
+                note.addEventListener(t, (e) => { if (e.pointerType === 'touch') return; circleUp(i, note); }));
+
             staffInner.appendChild(note);
             staffNoteEls.push(note);
+            if (i < soloIdx) paintNoteFill(i, 1);
         });
         updateStaffScroll();
+    }
+
+    // נגינה מהדמות. רק התו שבתור מגיב; נגיעה באחרים לא עושה כלום
+    // ואינה נספרת כטעות, בדיוק כמו קליד לא נכון במצב הזה.
+    function circleDown(idx, el) {
+        if (!soloMode || soloHold || idx !== soloIdx) return;
+        const n = songNotes[idx];
+        const keyEl = keyByNote[n.note];
+        if (keyEl) keyEl.classList.add('active');
+        dismissPracticeHint();
+        try { sampler.triggerAttack(n.note); } catch (err) {}
+        if (n.hold) startHold(idx, el);
+        else completeSoloNote(idx, el);
+    }
+    function circleUp(idx, el) {
+        const n = songNotes[idx];
+        if (!n) return;
+        try { sampler.triggerRelease(n.note); } catch (err) {}
+        const keyEl = keyByNote[n.note];
+        if (keyEl) keyEl.classList.remove('active');
+        releaseHold(el);
     }
 
     // ===================== משכי תווים =====================
@@ -782,7 +839,11 @@
         const t = 'translate(' + (Math.sin(Date.now() / 240) * 6) + ',' + ((1 - p) * 100) + ')';
         el.querySelectorAll('.wv').forEach(wv => wv.setAttribute('transform', t));
     }
-    function paintNoteFill(idx, p) { setWater(staffWaterEls[idx], p); }
+    function paintNoteFill(idx, p) {
+        setWater(staffWaterEls[idx], p);
+        const r = ringEls[idx];
+        if (r) r.style.setProperty('--p', p.toFixed(3));
+    }
 
     let soloHold = null;
     let drainSeq = 0;
@@ -801,27 +862,33 @@
         } catch (err) {}
     }
 
-    function completeSoloNote(idx, key) {
-        fillKey(songNotes[idx].note);
-        key.classList.add('correct-flash');
-        const star = document.createElement('div');
-        star.className = 'star-pop';
-        star.textContent = '⭐';
-        key.appendChild(star);
-        setTimeout(() => {
-            key.classList.remove('correct-flash');
-            star.remove();
-        }, 550);
+    // הקליד מהבהב תמיד, גם כשניגנו מהדמות, כדי שהקשר ביניהם יישאר גלוי.
+    function completeSoloNote(idx, pressedEl) {
+        const n = songNotes[idx];
+        const keyEl = keyByNote[n.note];
+        fillKey(n.note);
+        if (keyEl) {
+            keyEl.classList.add('correct-flash');
+            setTimeout(() => keyEl.classList.remove('correct-flash'), 550);
+        }
+        const host = pressedEl || keyEl;
+        if (host) {
+            const star = document.createElement('div');
+            star.className = 'star-pop';
+            star.textContent = '⭐';
+            host.appendChild(star);
+            setTimeout(() => star.remove(), 550);
+        }
         paintNoteFill(idx, 1);
         markStaffNoteDone(idx);
         soloIdx++;
         updateStaffScroll();
     }
 
-    function startHold(idx, key) {
+    function startHold(idx, token) {
         if (soloHold) return;
         drainSeq++;
-        soloHold = { idx: idx, key: key, full: false, t0: Date.now(), need: songNotes[idx].dur * 1000 };
+        soloHold = { idx: idx, token: token, full: false, t0: Date.now(), need: songNotes[idx].dur * 1000 };
         const el = staffNoteEls[idx];
         if (el) el.classList.add('holding');
         holdTick();
@@ -840,15 +907,15 @@
         soloHold.raf = requestAnimationFrame(holdTick);
     }
 
-    function releaseHold(key) {
-        if (!soloHold || soloHold.key !== key) return;
+    function releaseHold(token) {
+        if (!soloHold || soloHold.token !== token) return;
         const h = soloHold;
         soloHold = null;
         cancelAnimationFrame(h.raf);
         const el = staffNoteEls[h.idx];
         if (el) el.classList.remove('holding', 'hold-full');
         const p = Math.min(1, (Date.now() - h.t0) / h.need);
-        if (p >= HOLD_TOL) completeSoloNote(h.idx, h.key);
+        if (p >= HOLD_TOL) completeSoloNote(h.idx, h.token);
         else drainNote(h.idx, p);
     }
 
@@ -1690,7 +1757,10 @@
         document.documentElement.style.setProperty('--black-w', blackW + 'px');
         document.documentElement.style.setProperty('--key-h', keyH + 'px');
         document.documentElement.style.setProperty('--lane-h', laneH + 'px');
-        document.documentElement.style.setProperty('--staff-h', laneH + 'px');
+        // רצועת הדמויות היא התוכן המרכזי במצב "לנסות לבד", ולכן היא מקבלת
+        // גובה משלה ולא יורשת את הפס הצר של מסלול התווים הנופלים.
+        const staffH = Math.max(86, Math.min(116, availableH - keyH - 8));
+        document.documentElement.style.setProperty('--staff-h', staffH + 'px');
     }
     window.addEventListener('resize', () => { sizeKeys(); if (soloMode) buildStaff(); });
     sizeKeys();
