@@ -621,16 +621,23 @@
    exact corner and size it holds on every page of the platform, and the
    arrows read as secondary to it.
 
-   They sit in a row anchored beside the home button rather than at fixed
+   The row sits directly BELOW the home button, not beside it. Beside it was
+   the first choice and it looked right in isolation, but measured against
+   the real pages it covered a control on 6 of 11 lessons — the play/pause
+   button, or "ככה השיר נשמע" — because most lessons put their own control
+   row at exactly that height. The left margin under the home button is
+   empty on every lesson, so this also survives future layout changes.
+
+   They sit in a row rather than at fixed
    coordinates each, so a lesson that has only one of them keeps it snug
    against the home button instead of leaving a hole where the other would
    have been. The row is forced to LTR so the arrows keep their order on a
    right-to-left page. */
 .sol-nav {
     position: fixed;
-    top: 12px;
-    left: 72px;
-    height: 52px;
+    top: 72px;
+    left: 12px;
+    height: 38px;
     z-index: 101;
     display: flex;
     align-items: center;
@@ -654,7 +661,7 @@
 .sol-nav-btn:focus-visible { outline: 3px solid #FFFFFF; outline-offset: 3px; }
 .sol-nav-btn svg { width: 20px; height: 20px; }
 @media (max-width: 640px) {
-    .sol-nav { top: 8px; left: 60px; height: 44px; gap: 6px; }
+    .sol-nav { top: 58px; left: 8px; height: 34px; gap: 6px; }
     .sol-nav-btn { width: 34px; height: 34px; }
     .sol-nav-btn svg { width: 18px; height: 18px; }
 }
